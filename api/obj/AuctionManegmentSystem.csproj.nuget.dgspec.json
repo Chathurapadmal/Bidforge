@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Programs\\AuctionManegmentSystem\\AuctionManegmentSystem.csproj": {}
+    "D:\\Programs\\AuctionManegmentSystem\\api\\AuctionManegmentSystem.csproj": {}
   },
   "projects": {
-    "D:\\Programs\\AuctionManegmentSystem\\AuctionManegmentSystem.csproj": {
+    "D:\\Programs\\AuctionManegmentSystem\\api\\AuctionManegmentSystem.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Programs\\AuctionManegmentSystem\\AuctionManegmentSystem.csproj",
+        "projectUniqueName": "D:\\Programs\\AuctionManegmentSystem\\api\\AuctionManegmentSystem.csproj",
         "projectName": "AuctionManegmentSystem",
-        "projectPath": "D:\\Programs\\AuctionManegmentSystem\\AuctionManegmentSystem.csproj",
+        "projectPath": "D:\\Programs\\AuctionManegmentSystem\\api\\AuctionManegmentSystem.csproj",
         "packagesPath": "C:\\Users\\Chathura\\.nuget\\packages\\",
-        "outputPath": "D:\\Programs\\AuctionManegmentSystem\\obj\\",
+        "outputPath": "D:\\Programs\\AuctionManegmentSystem\\api\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "D:\\Softwares\\VS sdk\\NuGetPackages"
