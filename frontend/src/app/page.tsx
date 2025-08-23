@@ -28,7 +28,6 @@ export default async function Page() {
   return (
     <main className="p-6 space-y-10">
       <PhotoSlider images={["/bidf.png", "/bidf.jpg", "/photo2.webp", "/photo1.webp"]} />
-
       <ProductGrid items={products} />
     </main>
   );
