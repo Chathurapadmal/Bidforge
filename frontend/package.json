@@ -2,12 +2,12 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev --turbopack",
+    "scripts": {
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "build-open": "opennext build",
+    "deploy": "wrangler deploy .open-next/worker"
   },
+
   "dependencies": {
     "framer-motion": "^12.23.12",
     "next": "15.4.6",
@@ -32,12 +32,8 @@
  
  }
 
-,
-  "scripts": {
-    "build": "next build",
-    "build-open": "opennext build",
-    "deploy": "wrangler deploy .open-next/worker"
-  }
+
+
 
 
 
