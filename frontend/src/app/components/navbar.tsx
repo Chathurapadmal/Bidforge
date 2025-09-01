@@ -2,39 +2,74 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
 
-
+  const linkClasses = (path) =>
+    `block px-3 py-2 transition duration-200 ${
+      pathname === path
+        ? "text-black font-semibold border-b-2 border-black"
+        : "text-gray-700 hover:text-black hover:shadow-md"
+    }`;
 
   return (
-    <nav className="bg-white border-b shadow-md">
-      <div className="max-w-7*1 mx-auto px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <img src="/bidf.png" alt="Logo" className="h-20 w-25" />
-          <button className="md:hidden" onClick={() => setIsOpen(!isOpen)}>
-            <span className="text-3xl">&#9776;</span> 
-          </button>
+    <nav className="bg-gray-100 border-b shadow-md">
+      <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
+        {/* Logo on the left */}
+        <div className="flex items-center">
+          <img src="/bidf.png" alt="Logo" className="h-12 w-auto" />
         </div>
 
-        <div className={`md:flex gap-8 items-center ${isOpen ? 'block' : 'hidden'} md:block`}>
-          <Link href="/" className="text-text-mutedLight dark:text-text-mutedDark hover:text-amber-600">Home</Link>
-          <Link href="/auctions" className="text-text-mutedLight dark:text-text-mutedDark hover:text-amber-600">Auctions</Link>
+        {/* Desktop menu links */}
+        <div className="hidden md:flex gap-4 items-center">
+          <Link href="/" className={linkClasses("/")}>Home</Link>
+          <Link href="/auctions" className={linkClasses("/auctions")}>Auctions</Link>
 
           <div className="relative group">
-            <button className="text-text-mutedLight dark:text-text-mutedDark hover:text-amber-600">Services</button>
+            <button className={`${linkClasses("/services")} inline-flex items-center`}>
+              Services
+            </button>
             <div className="absolute hidden group-hover:block bg-white border shadow-md mt-1 rounded w-32">
-              <Link href="/services/buy" className="text-text-mutedLight dark:text-text-mutedDark hover:text-amber-600">Buy</Link>
-              <Link href="/services/sell" className="text-text-mutedLight dark:text-text-mutedDark">Sell</Link>
+              <Link href="/services/buy" className="block px-2 py-1 text-gray-700 hover:text-black hover:shadow-sm rounded">
+                Buy
+              </Link>
+              <Link href="/services/sell" className="block px-2 py-1 text-gray-700 hover:text-black hover:shadow-sm rounded">
+                Sell
+              </Link>
             </div>
           </div>
 
-          <Link href="/about" className="text-text-mutedLight dark:text-text-mutedDark hover:text-amber-600">About Us</Link>
-          <Link href="/contact" className="text-text-mutedLight dark:text-text-mutedDark hover:text-amber-600">Contact Us</Link>
-          <Link href="/profile" className="text-text-mutedLight dark:text-text-mutedDark hover:text-amber-600">Profile</Link>
+          <Link href="/about" className={linkClasses("/about")}>About Us</Link>
+          <Link href="/contact" className={linkClasses("/contact")}>Contact Us</Link>
+          <Link href="/profile" className={linkClasses("/profile")}>Profile</Link>
+        </div>
+
+        {/* Mobile Hamburger */}
+        <div className="md:hidden">
+          <button
+            className="bg-gray-300 text-gray-700 px-3 py-2 rounded-md hover:bg-gray-400 transition"
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            {isOpen ? "✖" : "☰"}
+          </button>
         </div>
       </div>
+
+      {/* Mobile menu dropdown */}
+      {/* Mobile menu dropdown */}
+<div className={`md:hidden bg-gray-50 border-t shadow-inner ${isOpen ? 'block' : 'hidden'} rounded-md mx-4 mt-2`}>
+  <Link href="/" className={linkClasses("/")}>Home</Link>
+  <Link href="/auctions" className={linkClasses("/auctions")}>Auctions</Link>
+  <Link href="/services/buy" className={linkClasses("/services/buy")}>Buy</Link>
+  <Link href="/services/sell" className={linkClasses("/services/sell")}>Sell</Link>
+  <Link href="/about" className={linkClasses("/about")}>About Us</Link>
+  <Link href="/contact" className={linkClasses("/contact")}>Contact Us</Link>
+  <Link href="/profile" className={linkClasses("/profile")}>Profile</Link>
+</div>
+
     </nav>
   );
 }
