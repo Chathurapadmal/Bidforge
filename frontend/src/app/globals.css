@@ -1,7 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&family=Comfortaa:wght@300..700&family=Eczar:wght@400..800&family=Signika:wght@300..700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Import Google Fonts */
 
 :root {
   --background: #ffffff;
@@ -22,8 +24,9 @@
   }
 }
 
+/* Default body font */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Signika', Arial, Helvetica, sans-serif;
 }

@@ -8,11 +8,12 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
-  const linkClasses = (path) =>
-    `block px-3 py-2 transition duration-200 ${
+  // Tailwind classes for all links/buttons
+  const linkClasses = (path: string) =>
+    `block px-3 py-2 transition duration-200 font-signika rounded-md ${
       pathname === path
-        ? "text-black font-semibold border-b-2 border-black"
-        : "text-gray-700 hover:text-black hover:shadow-md"
+        ? "text-black font-semibold border-b-2 border-black bg-white"
+        : "text-gray-700 hover:text-black hover:shadow-lg bg-gray-23"
     }`;
 
   return (
@@ -32,11 +33,11 @@ export default function Navbar() {
             <button className={`${linkClasses("/services")} inline-flex items-center`}>
               Services
             </button>
-            <div className="absolute hidden group-hover:block bg-white border shadow-md mt-1 rounded w-32">
-              <Link href="/services/buy" className="block px-2 py-1 text-gray-700 hover:text-black hover:shadow-sm rounded">
+            <div className="absolute hidden group-hover:block bg-gray-50 border mt-1 rounded w-32">
+              <Link href="/services/buy" className="block px-2 py-1 text-gray-700 hover:text-black hover:shadow-lg rounded-md">
                 Buy
               </Link>
-              <Link href="/services/sell" className="block px-2 py-1 text-gray-700 hover:text-black hover:shadow-sm rounded">
+              <Link href="/services/sell" className="block px-2 py-1 text-gray-700 hover:text-black hover:shadow-lg rounded-md">
                 Sell
               </Link>
             </div>
@@ -44,7 +45,9 @@ export default function Navbar() {
 
           <Link href="/about" className={linkClasses("/about")}>About Us</Link>
           <Link href="/contact" className={linkClasses("/contact")}>Contact Us</Link>
-          <Link href="/profile" className={linkClasses("/profile")}>Profile</Link>
+          <Link href="/profile" className={linkClasses("/profile")}>
+            <span className="material-symbols-outlined text-lg">account_circle</span>
+          </Link>
         </div>
 
         {/* Mobile Hamburger */}
@@ -59,17 +62,17 @@ export default function Navbar() {
       </div>
 
       {/* Mobile menu dropdown */}
-      {/* Mobile menu dropdown */}
-<div className={`md:hidden bg-gray-50 border-t shadow-inner ${isOpen ? 'block' : 'hidden'} rounded-md mx-4 mt-2`}>
-  <Link href="/" className={linkClasses("/")}>Home</Link>
-  <Link href="/auctions" className={linkClasses("/auctions")}>Auctions</Link>
-  <Link href="/services/buy" className={linkClasses("/services/buy")}>Buy</Link>
-  <Link href="/services/sell" className={linkClasses("/services/sell")}>Sell</Link>
-  <Link href="/about" className={linkClasses("/about")}>About Us</Link>
-  <Link href="/contact" className={linkClasses("/contact")}>Contact Us</Link>
-  <Link href="/profile" className={linkClasses("/profile")}>Profile</Link>
-</div>
-
+      <div className={`md:hidden bg-gray-50 border-t ${isOpen ? 'block' : 'hidden'} rounded-md mx-4 mt-2 p-2`}>
+        <Link href="/" className={linkClasses("/")}>Home</Link>
+        <Link href="/auctions" className={linkClasses("/auctions")}>Auctions</Link>
+        <Link href="/services/buy" className={linkClasses("/services/buy")}>Buy</Link>
+        <Link href="/services/sell" className={linkClasses("/services/sell")}>Sell</Link>
+        <Link href="/about" className={linkClasses("/about")}>About Us</Link>
+        <Link href="/contact" className={linkClasses("/contact")}>Contact Us</Link>
+        <Link href="/profile" className={linkClasses("/profile")}>
+          <span className="material-symbols-outlined text-lg">account_circle</span>
+        </Link>
+      </div>
     </nav>
   );
 }
