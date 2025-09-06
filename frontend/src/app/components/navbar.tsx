@@ -12,21 +12,21 @@ export default function Navbar() {
   const linkClasses = (path: string) =>
     `block px-3 py-2 transition duration-200 font-signika rounded-md ${
       pathname === path
-        ? "text-black font-semibold border-b-2 border-black bg-white"
-        : "text-gray-700 hover:text-black hover:shadow-lg bg-gray-23"
+        ? "text-black font-semibold border-b-2 border-black bg-white dark:bg-neutral-800"
+        : "text-gray-700 hover:text-black hover:shadow-lg "
     }`;
 
   return (
-    <nav className="bg-gray-100 border-b shadow-md">
-      <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
+    <nav className="bg-gray-50 border-b shadow-md ">
+      <div className=" mx-auto px-4 py-2 flex items-center justify-between">
         {/* Logo on the left */}
         <div className="flex items-center">
-          <img src="/bidf.png" alt="Logo" className="h-12 w-auto" />
+          <img src="/bidf.png" alt="Logo" className="h-8 w-auto m-0" />
         </div>
 
         {/* Desktop menu links */}
-        <div className="hidden md:flex gap-4 items-center">
-          <Link href="/" className={linkClasses("/")}>Home</Link>
+        <div className="hidden md:flex gap-4 items-center h-9">
+          <Link href="/" className={linkClasses("/")} >Home</Link>
           <Link href="/auctions" className={linkClasses("/auctions")}>Auctions</Link>
 
           <div className="relative group">
