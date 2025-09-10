@@ -45,7 +45,7 @@ export default function Navbar() {
 
           <Link href="/about" className={linkClasses("/about")}>About Us</Link>
           <Link href="/contact" className={linkClasses("/contact")}>Contact Us</Link>
-          <Link href="/profile" className={linkClasses("/profile")}>
+          <Link href="/authentication/register" className={linkClasses("/authentication/register")}>
             <span className="material-symbols-outlined text-lg">account_circle</span>
           </Link>
         </div>
