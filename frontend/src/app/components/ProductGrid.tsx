@@ -3,17 +3,15 @@
 import * as React from "react";
 import { listAuctions, type AuctionSummaryDto, type ListAuctionsParams } from "../services/api/AuctionsApi";
 
-// ---- UI type your grid expects (kept close to your original) ----
 export type Product = {
   id: string | number;
   title: string;
   image: string;
   price: number;
-  endsIn?: string; // formatted like "12m 30s"
+  endsIn?: string;
   badge?: string;
 };
 
-// ---- Helpers ----
 function formatEndsIn(endTimeIso?: string): string | undefined {
   if (!endTimeIso) return undefined;
   const end = new Date(endTimeIso).getTime();
@@ -43,7 +41,6 @@ function mapDtoToProduct(dto: AuctionSummaryDto): Product {
   };
 }
 
-// ---- Loading skeleton card ----
 function CardSkeleton() {
   return (
     <div className="animate-pulse rounded-2xl overflow-hidden border border-border-light dark:border-border-dark bg-panel-light dark:bg-panel-dark">

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Programs\\C#\\Bidforge\\Bidforge.csproj": {}
+    "D:\\Programs\\Bidforge\\Bidforge.csproj": {}
   },
   "projects": {
-    "D:\\Programs\\C#\\Bidforge\\Bidforge.csproj": {
+    "D:\\Programs\\Bidforge\\Bidforge.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Programs\\C#\\Bidforge\\Bidforge.csproj",
+        "projectUniqueName": "D:\\Programs\\Bidforge\\Bidforge.csproj",
         "projectName": "Bidforge",
-        "projectPath": "D:\\Programs\\C#\\Bidforge\\Bidforge.csproj",
+        "projectPath": "D:\\Programs\\Bidforge\\Bidforge.csproj",
         "packagesPath": "C:\\Users\\Chathura\\.nuget\\packages\\",
-        "outputPath": "D:\\Programs\\C#\\Bidforge\\obj\\",
+        "outputPath": "D:\\Programs\\Bidforge\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "D:\\Softwares\\VS sdk\\NuGetPackages"

@@ -8,7 +8,6 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
-  // Tailwind classes for all links/buttons
   const linkClasses = (path: string) =>
     `block px-3 py-2 transition duration-200 font-signika rounded-md ${
       pathname === path
@@ -18,10 +17,10 @@ export default function Navbar() {
 
   return (
     <nav className="bg-gray-50 border-b shadow-md ">
-      <div className=" mx-auto px-4 py-2 flex items-center justify-between">
-        {/* Logo on the left */}
+      <div className=" mx-auto px-10 py-auto flex items-center justify-between">
+      
         <div className="flex items-center">
-          <img src="/bidf.png" alt="Logo" className="h-8 w-auto m-0" />
+          <img src="/bidf.png" alt="Logo" className="h-20 w-auto m-0" />
         </div>
 
         {/* Desktop menu links */}
