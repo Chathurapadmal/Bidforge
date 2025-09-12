@@ -1,51 +1,47 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./src/**/*.{js,ts,jsx,tsx}"],
-  darkMode: "class", // Enable dark mode with a "dark" class on <html> or <body>
+  content: ["./app/**/*.{js,ts,jsx,tsx}", "./pages/**/*.{js,ts,jsx,tsx}", "./components/**/*.{js,ts,jsx,tsx}", "./src/**/*.{js,ts,jsx,tsx}"],
+
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
-        // 🎨 Backgrounds
         background: {
-          light: "#F9FAFB", // light off-white
-          dark: "#111827",  // dark gray
+          light: "#F9FAFB",
+          dark: "#111827",
         },
-
-        // 🎨 Primary (branding / nav)
         primary: {
-          light: "#1E3A8A", // deep navy
-          dark: "#3B82F6",  // bright blue
+          light: "#1E3A8A",
+          dark: "#3B82F6",
         },
-
-        // 🎨 Secondary (timers, highlights)
         secondary: {
-          light: "#F59E0B", // amber
-          dark: "#FBBF24",  // golden amber
+          light: "#F59E0B",
+          dark: "#FBBF24",
         },
-
-        // 🎨 Accent (success states, buttons)
         accent: {
-          light: "#10B981", // emerald green
-          dark: "#34D399",  // mint green
+          light: "#10B981",
+          dark: "#34D399",
         },
-
-        // 🎨 Text
         text: {
-          light: "#111827", // near-black
-          dark: "#F9FAFB",  // near-white
-          mutedLight: "#4B5563", // muted gray for light
-          mutedDark: "#9CA3AF",  // muted gray for dark
+          light: "#111827",
+          dark: "#F9FAFB",
+          mutedLight: "#4B5563",
+          mutedDark: "#9CA3AF",
         },
-
-        // 🎨 Borders & Panels
         border: {
-          light: "#E5E7EB", // light gray
-          dark: "#1F2937",  // dark gray
+          light: "#E5E7EB",
+          dark: "#1F2937",
         },
         panel: {
-          light: "#FFFFFF", // white cards
-          dark: "#1E293B",  // slate dark cards
+          light: "#FFFFFF",
+          dark: "#1E293B",
         },
+      },
+      fontFamily: {
+        caveat: ["Caveat", "cursive"],
+        comfortaa: ["Comfortaa", "cursive"],
+        eczar: ["Eczar", "serif"],
+        signika: ["Signika", "sans-serif"],
       },
     },
   },
