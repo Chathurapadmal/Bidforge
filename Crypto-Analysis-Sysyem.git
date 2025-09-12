@@ -1,0 +1,239 @@
+# Crypto Market Analysis System
+
+This repository contains a complete, minimal **crypto market analysis system**: a Python backend (FastAPI) that fetches market data from CoinGecko, computes technical indicators (SMA, EMA, RSI, MACD), and serves analysis endpoints — and a small frontend (single `index.html`) that visualizes prices and indicators with Chart.js.
+
+---
+
+## Project structure
+
+```
+crypto-market-analysis/
+├─ backend/
+│  ├─ main.py
+│  ├─ analysis.py
+│  ├─ requirements.txt
+│  └─ README.md
+├─ frontend/
+│  └─ index.html
+└─ README.md
+```
+
+---
+
+## Backend: `backend/main.py`
+
+```python
+# main.py
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import requests
+import pandas as pd
+from analysis import compute_indicators
+
+app = FastAPI(title="Crypto Market Analysis API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+COINGECKO_BASE = "https://api.coingecko.com/api/v3"
+
+class PriceRequest(BaseModel):
+    coin_id: str = "bitcoin"  # coingecko id, e.g. bitcoin, ethereum
+    vs_currency: str = "usd"
+    days: int = 30
+
+
+@app.post('/api/price')
+def get_price_series(req: PriceRequest):
+    """Fetch price series from CoinGecko and return computed indicators."""
+    url = f"{COINGECKO_BASE}/coins/{req.coin_id}/market_chart"
+    params = {"vs_currency": req.vs_currency, "days": req.days}
+    r = requests.get(url, params=params, timeout=10)
+    if r.status_code != 200:
+        raise HTTPException(status_code=502, detail="Failed to fetch from CoinGecko")
+    data = r.json()
+    # data['prices'] is list of [timestamp_ms, price]
+    prices = data.get('prices', [])
+    if not prices:
+        raise HTTPException(status_code=404, detail="No price data returned")
+
+    df = pd.DataFrame(prices, columns=['ts', 'price'])
+    df['ts'] = pd.to_datetime(df['ts'], unit='ms')
+    df.set_index('ts', inplace=True)
+
+    result = compute_indicators(df['price'])
+
+    # return JSON-serializable structure: timestamps + columns
+    payload = {
+        'meta': {'coin_id': req.coin_id, 'vs_currency': req.vs_currency, 'days': req.days},
+        'data': []
+    }
+    for idx, row in result.reset_index().iterrows():
+        payload['data'].append({
+            'ts': row['ts'].isoformat(),
+            'price': float(row['price']),
+            'sma_20': None if pd.isna(row.get('sma_20')) else float(row.get('sma_20')),
+            'ema_20': None if pd.isna(row.get('ema_20')) else float(row.get('ema_20')),
+            'rsi_14': None if pd.isna(row.get('rsi_14')) else float(row.get('rsi_14')),
+            'macd': None if pd.isna(row.get('macd')) else float(row.get('macd')),
+            'macd_signal': None if pd.isna(row.get('macd_signal')) else float(row.get('macd_signal')),
+        })
+    return payload
+```
+
+---
+
+## Backend helper: `backend/analysis.py`
+
+```python
+# analysis.py
+import pandas as pd
+
+
+def sma(series: pd.Series, window: int = 20) -> pd.Series:
+    return series.rolling(window=window, min_periods=1).mean()
+
+
+def ema(series: pd.Series, span: int = 20) -> pd.Series:
+    return series.ewm(span=span, adjust=False).mean()
+
+
+def rsi(series: pd.Series, period: int = 14) -> pd.Series:
+    delta = series.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.rolling(window=period, min_periods=period).mean()
+    avg_loss = loss.rolling(window=period, min_periods=period).mean()
+    # Wilder's smoothing after first value
+    avg_gain = avg_gain.fillna(method='ffill')
+    avg_loss = avg_loss.fillna(method='ffill')
+    rs = avg_gain / (avg_loss.replace(0, 1e-10))
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
+
+
+def macd(series: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9):
+    fast_ema = series.ewm(span=fast, adjust=False).mean()
+    slow_ema = series.ewm(span=slow, adjust=False).mean()
+    macd_line = fast_ema - slow_ema
+    macd_signal = macd_line.ewm(span=signal, adjust=False).mean()
+    return macd_line, macd_signal
+
+
+def compute_indicators(price_series: pd.Series) -> pd.DataFrame:
+    df = price_series.to_frame(name='price').copy()
+    df['sma_20'] = sma(df['price'], 20)
+    df['ema_20'] = ema(df['price'], 20)
+    df['rsi_14'] = rsi(df['price'], 14)
+    macd_line, macd_signal = macd(df['price'])
+    df['macd'] = macd_line
+    df['macd_signal'] = macd_signal
+    df.index.name = 'ts'
+    df.reset_index(inplace=True)
+    return df
+```
+
+---
+
+## Backend requirements: `backend/requirements.txt`
+
+```
+fastapi
+uvicorn[standard]
+requests
+pandas
+pydantic
+```
+
+---
+
+## Frontend: `frontend/index.html`
+
+```html
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Crypto Market Analysis</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h1>Crypto Market Analysis — Demo</h1>
+  <label>Coin ID (coingecko): <input id="coin" value="bitcoin"></label>
+  <label>Days: <input id="days" type="number" value="30" min="1" max="365"></label>
+  <button id="load">Load</button>
+
+  <canvas id="chart" width="1200" height="500"></canvas>
+
+  <script>
+    const apiBase = 'http://localhost:8000/api/price';
+    document.getElementById('load').addEventListener('click', async () => {
+      const coin = document.getElementById('coin').value.trim() || 'bitcoin';
+      const days = parseInt(document.getElementById('days').value) || 30;
+      const res = await fetch(apiBase, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({coin_id: coin, vs_currency:'usd', days})
+      });
+      const payload = await res.json();
+      const labels = payload.data.map(d => new Date(d.ts));
+      const prices = payload.data.map(d => d.price);
+      const sma = payload.data.map(d => d.sma_20);
+      const ema = payload.data.map(d => d.ema_20);
+
+      const ctx = document.getElementById('chart').getContext('2d');
+      if (window._chart) window._chart.destroy();
+      window._chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {label: 'price', data: prices, borderWidth: 1, pointRadius: 0},
+            {label: 'SMA20', data: sma, borderWidth: 1, pointRadius: 0},
+            {label: 'EMA20', data: ema, borderWidth: 1, pointRadius: 0}
+          ]
+        },
+        options: {scales: {x: {type: 'time', time: {unit: 'day'}}}}
+      });
+    });
+  </script>
+</body>
+</html>
+```
+
+---
+
+## How to run (backend)
+
+1. Create and activate a Python 3.10+ virtualenv
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate   # or .venv\Scripts\activate on Windows
+pip install -r requirements.txt
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+2. Open `frontend/index.html` in a browser (or serve it via a static server) and press "Load".
+
+---
+
+## Notes & next steps
+
+* This uses CoinGecko's public API (no key). Rate limits exist; for production get a paid source or cache aggressively.
+* Add authentication, persistent storage, and a jobs queue for scheduled fetches.
+* Add unit tests, Dockerfile, and CI workflow for production readiness.
+* Want extra indicators (Bollinger Bands, ATR), alerts (email / Telegram), or backtesting? Tell me and I'll add them.
+
+---
+
+## License
+
+MIT
