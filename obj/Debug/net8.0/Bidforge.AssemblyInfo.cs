@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Bidforge")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+36239d510279ca5ec1c2795947d34c1ee29414d4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6de5728c5e337e387db884a041e75928e7a0cf89")]
 [assembly: System.Reflection.AssemblyProductAttribute("Bidforge")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Bidforge")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
