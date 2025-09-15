@@ -8,6 +8,7 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
+  // Tailwind classes for all links/buttons
   const linkClasses = (path: string) =>
     `block px-3 py-2 transition duration-200 font-signika rounded-md ${
       pathname === path
@@ -17,14 +18,14 @@ export default function Navbar() {
 
   return (
     <nav className="bg-gray-50 border-b shadow-md ">
-      <div className=" mx-auto px-10 py-auto flex items-center justify-between">
-      
+      <div className=" mx-auto px-3 py-1 flex items-center justify-between">
+        {/* Logo on the left */}
         <div className="flex items-center">
-          <img src="/bidf.png" alt="Logo" className="h-20 w-auto m-0" />
+          <img src="/bidf.png" alt="Logo" className="h-10 w-auto " />
         </div>
 
         {/* Desktop menu links */}
-        <div className="hidden md:flex gap-4 items-center h-9">
+        <div className="hidden md:flex gap-2 items-center h-8">
           <Link href="/" className={linkClasses("/")} >Home</Link>
           <Link href="/auctions" className={linkClasses("/auctions")}>Auctions</Link>
 
@@ -44,7 +45,7 @@ export default function Navbar() {
 
           <Link href="/about" className={linkClasses("/about")}>About Us</Link>
           <Link href="/contact" className={linkClasses("/contact")}>Contact Us</Link>
-          <Link href="/authentication/register" className={linkClasses("/authentication/register")}>
+          <Link href="/profile" className={linkClasses("/profile")}>
             <span className="material-symbols-outlined text-lg">account_circle</span>
           </Link>
         </div>
