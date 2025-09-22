@@ -17,7 +17,7 @@ export default function Navbar() {
     }`;
 
   return (
-    <nav className="bg-gray-50 border-b shadow-md ">
+    <nav className="bg-gray-50 border-b shadow-md pb-2">
       <div className=" mx-auto px-3 py-1 flex items-center justify-between">
         {/* Logo on the left */}
         <div className="flex items-center">

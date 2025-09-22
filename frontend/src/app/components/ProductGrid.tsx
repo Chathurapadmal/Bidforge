@@ -1,15 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { listAuctions, type AuctionSummaryDto, type ListAuctionsParams } from "../services/api/AuctionsApi";
+import {
+  listAuctions,
+  type AuctionSummaryDto,
+  type ListAuctionsParams,
+} from "../services/api/AuctionsApi";
+import Image from "next/image";
 
-// ---- UI type your grid expects (kept close to your original) ----
+// ---- UI type your grid expects ----
 export type Product = {
   id: string | number;
   title: string;
   image: string;
   price: number;
-  endsIn?: string; // formatted like "12m 30s"
+  endTime?: string;   // ✅ keep raw endTime
+  endsIn?: string;    // ✅ formatted version
   badge?: string;
 };
 
@@ -38,6 +44,7 @@ function mapDtoToProduct(dto: AuctionSummaryDto): Product {
     title: dto.title,
     image: dto.image,
     price: dto.currentBid,
+    endTime: dto.endTime,       // ✅ store raw
     endsIn: formatEndsIn(dto.endTime),
     badge: dto.badge,
   };
@@ -62,24 +69,30 @@ function CardSkeleton() {
   );
 }
 
-export type ProductGridProps = {
+type ProductGridProps = {
   title?: string;
   viewAllHref?: string;
-  apiParams?: ListAuctionsParams; // shape the section (featured, sort, limit, etc.)
-  pollMs?: number; // optional lightweight polling fallback (e.g., 15000)
+  apiParams?: ListAuctionsParams;
+  pollMs?: number;
 };
 
 export default function ProductGrid({
   title = "Featured Auctions",
   viewAllHref = "/auctions",
-  apiParams = { featured: true, status: "ACTIVE", sort: "endingSoon", limit: 12, fields: "id,title,image,currentBid,endTime,badge" },
+  apiParams = {
+    featured: true,
+    status: "ACTIVE",
+    sort: "endingSoon",
+    limit: 12,
+    fields: "id,title,image,currentBid,endTime,badge",
+  },
   pollMs,
 }: ProductGridProps) {
   const [items, setItems] = React.useState<Product[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Optional countdown tick (keeps "endsIn" labels moving each second)
+  // Tick to refresh "endsIn"
   const [, forceTick] = React.useState(0);
   React.useEffect(() => {
     const t = setInterval(() => forceTick((n) => n + 1), 1000);
@@ -91,8 +104,12 @@ export default function ProductGrid({
       setError(null);
       const res = await listAuctions(apiParams);
       setItems(res.items.map(mapDtoToProduct));
-    } catch (e: any) {
-      setError(e?.message || "Failed to load auctions");
+    } catch (e: unknown) {   // ✅ fixed typing
+      if (e instanceof Error) {
+        setError(e.message);
+      } else {
+        setError("Failed to load auctions");
+      }
     } finally {
       setLoading(false);
     }
@@ -102,7 +119,6 @@ export default function ProductGrid({
     fetchGrid();
   }, [fetchGrid]);
 
-  // Optional low-frequency polling (SignalR is better; this is a safe fallback)
   React.useEffect(() => {
     if (!pollMs) return;
     const t = setInterval(fetchGrid, pollMs);
@@ -133,58 +149,58 @@ export default function ProductGrid({
       {/* Grid */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {loading
-          ? Array.from({ length: apiParams.limit ?? 8 }).map((_, i) => <CardSkeleton key={i} />)
-          : items.length === 0
-            ? (
+          ? Array.from({ length: apiParams.limit ?? 8 }).map((_, i) => (
+              <CardSkeleton key={i} />
+            ))
+          : items.length === 0 ? (
               <div className="col-span-full text-center text-sm text-text-mutedLight dark:text-text-mutedDark py-10">
                 No auctions to display right now.
               </div>
-            )
-            : items.map((p) => (
-              <article
-                key={p.id}
-                className="group rounded-2xl overflow-hidden border border-border-light dark:border-border-dark bg-panel-light dark:bg-panel-dark shadow-sm hover:shadow-md transition"
-              >
-                <div className="relative aspect-[4/3] overflow-hidden">
-                  <img
-                    src={p.image}
-                    alt={p.title}
-                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                  {p.badge && (
-                    <span className="absolute left-3 top-3 rounded-full bg-secondary-light dark:bg-secondary-dark text-white text-xs font-medium px-2 py-0.5">
-                      {p.badge}
-                    </span>
-                  )}
-                  {p.endsIn && (
-                    <span className="absolute right-3 bottom-3 rounded-md bg-black/70 text-white text-xs px-2 py-1">
-                      ⏱ {formatEndsIn((items.find(x => x.id === p.id) as any)?.endTime) ?? p.endsIn}
-                    </span>
-                  )}
-                </div>
-
-                <div className="p-4">
-                  <h3 className="line-clamp-2 text-sm font-semibold text-text-light dark:text-text-dark min-h-[2.5rem]">
-                    {p.title}
-                  </h3>
-                  <div className="mt-2 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-text-mutedLight dark:text-text-mutedDark">Current bid</p>
-                      <p className="text-base font-semibold text-text-light dark:text-text-dark">
-                        LKR {p.price.toLocaleString()}
-                      </p>
-                    </div>
-                    <a
-                      href={`/auctions/${p.id}`}
-                      className="inline-flex items-center justify-center rounded-lg bg-primary-light dark:bg-primary-dark text-white text-sm font-medium px-3 py-2 hover:opacity-90"
-                    >
-                      Place Bid
-                    </a>
+            ) : (
+              items.map((p) => (
+                <article
+                  key={p.id}
+                  className="group rounded-2xl overflow-hidden border border-border-light dark:border-border-dark bg-panel-light dark:bg-panel-dark shadow-sm hover:shadow-md transition"
+                >
+                  <div className="relative aspect-[4/3] overflow-hidden">
+                    {/* ✅ changed img to Next Image */}
+                    <Image
+                      src={p.image}
+                      alt={p.title}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    {p.badge && (
+                      <span className="absolute left-3 top-3 rounded-full bg-secondary-light dark:bg-secondary-dark text-white text-xs font-medium px-2 py-0.5">
+                        {p.badge}
+                      </span>
+                    )}
+                    {p.endTime && (
+                      <span className="absolute right-3 bottom-3 rounded-md bg-black/70 text-white text-xs px-2 py-1">
+                        ⏱ {formatEndsIn(p.endTime)}
+                      </span>
+                    )}
                   </div>
-                </div>
-              </article>
-            ))}
+
+                  <div className="p-4">
+                    <h3 className="line-clamp-2 text-sm font-medium text-text-light dark:text-text-dark">
+                      {p.title}
+                    </h3>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-primary-light dark:text-primary-dark font-semibold">
+                        ${p.price}
+                      </span>
+                      <a
+                        href={`/auctions/${p.id}`}
+                        className="text-sm text-primary-light dark:text-primary-dark hover:underline"
+                      >
+                        Bid now
+                      </a>
+                    </div>
+                  </div>
+                </article>
+              ))
+            )}
       </div>
     </section>
   );
