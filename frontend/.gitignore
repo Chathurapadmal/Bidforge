@@ -39,13 +39,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# .NET build artifacts
-bin/
-obj/
-*.user
-*.suo
-*.cache
-*.dbmdl
-*.log
-*.vs/

@@ -35,12 +35,21 @@ module.exports = {
           light: "#FFFFFF",
           dark: "#1E293B",
         },
+        brand: {
+          100: '#d6ecfd', // very light blue
+          300: '#7abdf6', // soft blue
+          500: '#2990ef', // your main brand color
+          700: '#1e6bb4', // darker for hover/active
+          900: '#15497d', // very dark for text/borders
+        },
+
       },
       fontFamily: {
         caveat: ["Caveat", "cursive"],
         comfortaa: ["Comfortaa", "cursive"],
         eczar: ["Eczar", "serif"],
         signika: ["Signika", "sans-serif"],
+        allan: ["Allan", "sans-serif"],
       },
     },
   },
