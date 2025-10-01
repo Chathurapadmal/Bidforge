@@ -1,46 +1,51 @@
-// Lightweight client for /auctions list endpoint
 export type AuctionSummaryDto = {
-  id: string;
+  id: number;
   title: string;
-  image: string;        // CDN URL for the hero image
-  currentBid: number;   // backend-calculated current highest bid
-  endTime?: string;     // ISO (UTC). Optional if already closed
-  badge?: string;       // "Ending soon" | "New" | "Hot" | "Reserve met" | etc.
+  image?: string | null;
+  currentBid: number;
+  endTime?: string | null;
+  badge?: string | null;
+  description?: string | null;
+  createdAt?: string;
 };
 
 export type ListAuctionsParams = {
-  status?: "ACTIVE" | "CLOSED" | "UPCOMING";
-  featured?: boolean;
-  sort?: "endingSoon" | "newlyListed" | "popular";
+  sort?: "endingSoon" | "latest";
   limit?: number;
-  cursor?: string;
-  // Optional field selection if your API supports it:
-  fields?: string; // e.g., "id,title,image,currentBid,endTime,badge"
+  page?: number;
 };
 
-export type ListAuctionsResponse = {
-  items: AuctionSummaryDto[];
-  nextCursor?: string | null;
-};
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://localhost:7168";
 
-export async function listAuctions(
-  params: ListAuctionsParams = {}
-): Promise<ListAuctionsResponse> {
-  const url = new URL("/auctions", process.env.NEXT_PUBLIC_API_BASE_URL= "https//:localhost:5001/api");
-  Object.entries(params).forEach(([k, v]) => {
-    if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));
+export async function listAuctions(params: ListAuctionsParams = {}) {
+  const url = new URL(`${API_BASE}/api/auctions`);
+  Object.entries(params).forEach(([k, v]) => v != null && url.searchParams.set(k, String(v)));
+  const res = await fetch(url.toString(), { cache: "no-store" });
+  if (!res.ok) throw new Error(`listAuctions failed: ${res.status}`);
+  return res.json() as Promise<{ total: number; page: number; limit: number; items: AuctionSummaryDto[] }>;
+}
+
+export async function createAuction(body: Partial<AuctionSummaryDto>) {
+  const res = await fetch(`${API_BASE}/api/auctions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
-
-  const res = await fetch(url.toString(), {
-    method: "GET",
-    headers: { "Accept": "application/json" },
-    cache: "no-store", // these change often
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text || `Failed to fetch auctions (${res.status})`);
-  }
-
+  if (!res.ok) throw new Error(`createAuction failed: ${res.status}`);
   return res.json();
+}
+
+export async function updateAuction(id: number, body: Partial<AuctionSummaryDto>) {
+  const res = await fetch(`${API_BASE}/api/auctions/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`updateAuction failed: ${res.status}`);
+  return res.json();
+}
+
+export async function deleteAuction(id: number) {
+  const res = await fetch(`${API_BASE}/api/auctions/${id}`, { method: "DELETE" });
+  if (!res.ok && res.status !== 204) throw new Error(`deleteAuction failed: ${res.status}`);
 }

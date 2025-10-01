@@ -1,10 +1,23 @@
-
-// src/app/profile/page.tsx
-"use client";
-
+﻿"use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AuthApi, User } from "../services/api/AuthApi";
+// Small local helper since the project doesn't have ../services/api/AuthApi
+type User = {
+  id: string | number;
+  name: string;
+  email: string;
+};
+
+const AuthApi = {
+  async me(token: string | null): Promise<User> {
+    if (!token) throw new Error("No token provided");
+    const res = await fetch(`/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`Failed to load user: ${res.status}`);
+    return res.json();
+  },
+};
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
@@ -17,9 +30,10 @@ export default function ProfilePage() {
       setLoading(false);
       return;
     }
+
     AuthApi.me(token)
-      .then(setUser)
-      .catch((e) => setError(e?.message ?? "Failed to load user"))
+  .then(setUser)
+  .catch((e: any) => setError(e?.message ?? "Failed to load user"))
       .finally(() => setLoading(false));
   }, []);
 
@@ -57,16 +71,16 @@ export default function ProfilePage() {
           <span className="font-medium">ID:</span> {user.id}
         </div>
       </div>
-
       <button
         className="mt-6 text-sm underline"
         onClick={() => {
           localStorage.removeItem("auth_token");
           setUser(null);
-        }}
-      >
+        }}>
         Log out
       </button>
     </div>
   );
 }
+
+
