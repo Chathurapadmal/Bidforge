@@ -1,74 +1,114 @@
 ﻿"use client";
-import Image from "next/image";
+
+import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { authClient } from "../../lib/auth-client";
 
 export default function LoginPage() {
-  return (
-    <main className="flex justify-center items-center min-h-screen bg-gray-100 px-4">
-      <div className="bg-white p-6 sm:p-8 rounded-lg shadow-lg w-full max-w-md">
-        <div className="flex justify-center mb-4">
-          <Image src="/bidf.png" alt="Bidforge Logo" width={80} height={80} className="h-10 w-auto" />
-        </div>
-        <h2 className="text-xl font-bold text-center mb-6 text-gray-400">Login to Bidforge</h2>
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
-        <form className="flex flex-col gap-4">
-          <input
-            type="email"
-            placeholder="Email"
-            className="border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            className="border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-            required
-          />
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErr(null);
+    setLoading(true);
+    const { error } = await authClient.signIn.email(
+      { email, password, rememberMe: remember, callbackURL: "/dashboard" },
+      {
+        onError: (error: any) => setErr(error?.message || "Login failed."),
+        onSuccess: () => router.push("/dashboard"),
+      }
+    );
 
-          <div className="flex justify-between items-center text-sm text-gray-600 ">
-            <label className="flex items-center gap-2">
-              <input type="checkbox" className="accent-blue-600" />
-              Remember me
-            </label>
-            <Link href="/forgot-password" className="text-blue-600 hover:underline">
-              Forgot password?
-            </Link>
-          </div>
-          <button
-            type="submit"
-            className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition"
-          >
-            Login
-          </button>
-        </form>
-        {}
-        <div className="flex items-center gap-2 my-6">
-          <hr className="flex-grow border-gray-300" />
-          <span className="text-sm text-gray-500">or continue with</span>
-          <hr className="flex-grow border-gray-300" />
-        </div>
-        {}
-        <div className="flex gap-4">
-          <button className="flex-1 border p-2 rounded hover:bg-gray-50 text-gray-600">
-            <Image src="/google.png" alt="Google" width={20} height={20} className="inline mr-2" />
-            Google
-          </button>
-          <button className="flex-1 border p-2 rounded hover:bg-gray-50 text-gray-600">
-            <Image src="/facebook.png" alt="Facebook" width={20} height={20} className="inline mr-2" />
-            Facebook
-          </button>
-        </div>
+    setLoading(false);
+    if (error) setErr(error?.message || "Login failed.");
+  };
 
-        {}
-        <p className="text-sm text-center mt-6 text-gray-400">
-          Don’t have an account?{" "}
-          <Link href="/register" className="text-blue-600 hover:underline">
-            Register
-          </Link>
-        </p>
-      </div>
-    </main>
+  return React.createElement(
+    "main",
+    {
+      className:
+        "flex justify-center items-center min-h-screen bg-gray-100 px-4",
+    },
+    React.createElement(
+      "div",
+      { className: "bg-white p-6 sm:p-8 rounded-lg shadow-lg w-full max-w-md" },
+      React.createElement(
+        "div",
+        { className: "flex justify-center mb-4" },
+        React.createElement("img", {
+          src: "/bidf.png",
+          alt: "Bidforge Logo",
+          width: 80,
+          height: 80,
+          className: "h-10 w-auto",
+        })
+      ),
+      React.createElement(
+        "h2",
+        { className: "text-xl font-bold text-center mb-6 text-gray-700" },
+        "Login to Bidforge"
+      ),
+
+      React.createElement(
+        "form",
+        {
+          className: "flex flex-col gap-4",
+          onSubmit: onSubmit,
+          noValidate: true,
+        },
+        React.createElement("input", {
+          type: "email",
+          placeholder: "Email",
+          autoComplete: "email",
+          className: "border p-2 rounded",
+          value: email,
+          onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+            setEmail(e.target.value),
+          required: true,
+        }),
+
+        React.createElement("input", {
+          type: "password",
+          placeholder: "Password",
+          autoComplete: "current-password",
+          className: "border p-2 rounded",
+          value: password,
+          onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+            setPassword(e.target.value),
+          required: true,
+        }),
+
+        React.createElement(
+          "button",
+          {
+            type: "submit",
+            className: "bg-blue-600 text-white p-2 rounded",
+            disabled: loading,
+          },
+          loading ? "Signing in..." : "Login"
+        ),
+
+        err &&
+          React.createElement("p", { className: "text-red-600 text-sm" }, err)
+      ),
+
+      React.createElement(
+        "p",
+        { className: "text-sm text-center mt-6 text-gray-500" },
+        "Don’t have an account? ",
+        React.createElement(
+          Link,
+          { href: "/register", className: "text-blue-600 hover:underline" },
+          "Register"
+        )
+      )
+    )
   );
 }
-
-
