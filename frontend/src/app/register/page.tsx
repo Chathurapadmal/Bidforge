@@ -1,96 +1,93 @@
 ﻿"use client";
 
-import React, { useState } from "react";
-import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const router = useRouter();
+  const [form, setForm] = useState({ email: "", password: "", name: "" });
+  const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setErr(null);
     setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/auth/sign-up/email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.message || `HTTP ${res.status}`);
-      }
-      window.location.href = "/dashboard";
-    } catch (err: any) {
-      setError(err?.message || String(err));
-    } finally {
-      setLoading(false);
+
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+
+    if (res.ok) {
+      router.push("/login");
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setErr(data?.message || "Registration failed");
     }
+
+    setLoading(false);
   }
 
-  return React.createElement(
-    "main",
-    { style: { padding: 20 } },
-    React.createElement("h1", null, "Register"),
-    React.createElement(
-      "form",
-      {
-        onSubmit: handleSubmit,
-        style: { display: "grid", gap: 8, maxWidth: 420 },
-      },
-      React.createElement(
-        "label",
-        null,
-        "Email",
-        React.createElement("input", {
-          value: email,
-          onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
-            setEmail(e.target.value),
-          type: "email",
-          required: true,
-          className: "border p-2 w-full",
-        })
-      ),
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+      <div className="w-[360px] rounded-3xl border-2 border-orange-500/90 bg-white p-8">
+        <h1 className="text-center text-3xl font-semibold text-orange-600 mb-6">
+          REGISTER
+        </h1>
+        <form onSubmit={onSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm text-orange-500 mb-1">
+              Full Name
+            </label>
+            <input
+              type="text"
+              required
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="w-full border-b-2 border-orange-200 focus:border-orange-500 outline-none py-2"
+              placeholder="Your name"
+            />
+          </div>
 
-      React.createElement(
-        "label",
-        null,
-        "Password",
-        React.createElement("input", {
-          value: password,
-          onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
-            setPassword(e.target.value),
-          type: "password",
-          required: true,
-          className: "border p-2 w-full",
-        })
-      ),
+          <div>
+            <label className="block text-sm text-orange-500 mb-1">Email</label>
+            <input
+              type="email"
+              required
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              className="w-full border-b-2 border-orange-200 focus:border-orange-500 outline-none py-2"
+              placeholder="you@example.com"
+            />
+          </div>
 
-      React.createElement(
-        "div",
-        null,
-        React.createElement(
-          "button",
-          {
-            disabled: loading,
-            type: "submit",
-            className: "bg-blue-600 text-white px-4 py-2 rounded",
-          },
-          loading ? "Creating..." : "Create account"
-        )
-      ),
+          <div>
+            <label className="block text-sm text-orange-500 mb-1">
+              Password
+            </label>
+            <input
+              type="password"
+              required
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              className="w-full border-b-2 border-orange-200 focus:border-orange-500 outline-none py-2"
+              placeholder="••••••••"
+            />
+          </div>
 
-      error && React.createElement("div", { className: "text-red-600" }, error),
+          {err && <p className="text-red-600 text-sm">{err}</p>}
 
-      React.createElement(
-        "p",
-        { className: "text-sm mt-4" },
-        "Already have an account? ",
-        React.createElement(Link, { href: "/login" }, "Login")
-      )
-    )
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-orange-500 text-white rounded-xl py-3 font-semibold disabled:opacity-60"
+          >
+            {loading ? "Registering..." : "Sign Up"}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }

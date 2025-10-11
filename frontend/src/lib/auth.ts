@@ -2,6 +2,7 @@
 import { MssqlDialect } from "kysely";
 import * as Tedious from "tedious";
 import * as Tarn from "tarn";
+// import { nextCookies } from "better-auth/next-js";
 
 const dialect = new MssqlDialect({
   tarn: { ...Tarn, options: { min: 0, max: 10 } },

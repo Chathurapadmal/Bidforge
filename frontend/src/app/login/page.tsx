@@ -1,114 +1,106 @@
 ﻿"use client";
 
-import React from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { authClient } from "../../lib/auth-client";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(true);
+  const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const onSubmit = async (e: React.FormEvent) => {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
     setLoading(true);
-    const { error } = await authClient.signIn.email(
-      { email, password, rememberMe: remember, callbackURL: "/dashboard" },
-      {
-        onError: (error: any) => setErr(error?.message || "Login failed."),
-        onSuccess: () => router.push("/dashboard"),
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (res.ok) {
+        router.replace("/dashboard"); // change to wherever you land after login
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setErr(data?.message || "Invalid credentials");
       }
-    );
+    } catch {
+      setErr("Network error. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-    setLoading(false);
-    if (error) setErr(error?.message || "Login failed.");
-  };
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+      <div className="w-[360px] rounded-3xl border-2 border-orange-500/90 shadow-[0_0_0_6px_rgba(249,115,22,0.25)] bg-white p-8">
+        <h1 className="text-center text-4xl font-semibold text-orange-600 drop-shadow-sm tracking-wide">
+          LOGIN
+        </h1>
 
-  return React.createElement(
-    "main",
-    {
-      className:
-        "flex justify-center items-center min-h-screen bg-gray-100 px-4",
-    },
-    React.createElement(
-      "div",
-      { className: "bg-white p-6 sm:p-8 rounded-lg shadow-lg w-full max-w-md" },
-      React.createElement(
-        "div",
-        { className: "flex justify-center mb-4" },
-        React.createElement("img", {
-          src: "/bidf.png",
-          alt: "Bidforge Logo",
-          width: 80,
-          height: 80,
-          className: "h-10 w-auto",
-        })
-      ),
-      React.createElement(
-        "h2",
-        { className: "text-xl font-bold text-center mb-6 text-gray-700" },
-        "Login to Bidforge"
-      ),
+        <form onSubmit={onSubmit} className="mt-10 space-y-6">
+          <div>
+            <label className="block text-sm text-orange-500 mb-1">Email:</label>
+            <div className="relative">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full border-b-2 border-orange-200 focus:border-orange-500 outline-none py-2 pr-10"
+                placeholder="you@example.com"
+                autoComplete="email"
+              />
+              <span className="absolute right-0 top-2.5 pointer-events-none">
+                📧
+              </span>
+            </div>
+          </div>
 
-      React.createElement(
-        "form",
-        {
-          className: "flex flex-col gap-4",
-          onSubmit: onSubmit,
-          noValidate: true,
-        },
-        React.createElement("input", {
-          type: "email",
-          placeholder: "Email",
-          autoComplete: "email",
-          className: "border p-2 rounded",
-          value: email,
-          onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
-            setEmail(e.target.value),
-          required: true,
-        }),
+          <div>
+            <label className="block text-sm text-orange-500 mb-1">
+              Password:
+            </label>
+            <div className="relative">
+              <input
+                type={showPwd ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full border-b-2 border-orange-200 focus:border-orange-500 outline-none py-2 pr-10"
+                placeholder="••••••••"
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd((s) => !s)}
+                className="absolute right-0 top-2 text-sm"
+                aria-label="Toggle password visibility"
+              >
+                {showPwd ? "🙈" : "🔒"}
+              </button>
+            </div>
+          </div>
 
-        React.createElement("input", {
-          type: "password",
-          placeholder: "Password",
-          autoComplete: "current-password",
-          className: "border p-2 rounded",
-          value: password,
-          onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
-            setPassword(e.target.value),
-          required: true,
-        }),
+          {err && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-2">
+              {err}
+            </p>
+          )}
 
-        React.createElement(
-          "button",
-          {
-            type: "submit",
-            className: "bg-blue-600 text-white p-2 rounded",
-            disabled: loading,
-          },
-          loading ? "Signing in..." : "Login"
-        ),
-
-        err &&
-          React.createElement("p", { className: "text-red-600 text-sm" }, err)
-      ),
-
-      React.createElement(
-        "p",
-        { className: "text-sm text-center mt-6 text-gray-500" },
-        "Don’t have an account? ",
-        React.createElement(
-          Link,
-          { href: "/register", className: "text-blue-600 hover:underline" },
-          "Register"
-        )
-      )
-    )
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-xl bg-orange-500 text-white font-semibold py-3 active:scale-[0.99] disabled:opacity-60"
+          >
+            {loading ? "Signing in..." : "Submit"}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }
