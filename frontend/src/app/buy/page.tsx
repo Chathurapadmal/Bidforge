@@ -14,11 +14,36 @@ type Auction = {
 };
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://localhost:7168";
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") ??
+  "http://localhost:7168";
+const PLACEHOLDER = "/placeholder.png";
 
 /* ---------- utils ---------- */
 function fmtCurrencyLKR(n: number) {
   return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
+// normalize anything (absolute url | "/images/x" | "x") → usable img src
+function toImageSrc(img?: string | null): string {
+  if (!img) return PLACEHOLDER;
+  let s = img.trim();
+  if (!s) return PLACEHOLDER;
+
+  try {
+    s = decodeURIComponent(s);
+  } catch {}
+
+  // absolute URL? use as-is
+  if (/^https?:\/\//i.test(s)) return s;
+
+  // server-relative path -> prefix API host
+  if (s.startsWith("/images/")) return `${API_BASE}${s}`;
+
+  // bare filename (or "images/x") -> build full URL
+  if (s.startsWith("images/")) s = `/${s}`;
+  if (!s.startsWith("/images/")) s = `/images/${encodeURIComponent(s)}`;
+
+  return `${API_BASE}${s}`;
 }
 
 function useCountdown(endIso?: string | null) {
@@ -52,18 +77,22 @@ function useCountdown(endIso?: string | null) {
   return { isOver, label };
 }
 
-/* ---------- card component (hooks live here, not inside a loop) ---------- */
+/* ---------- card component ---------- */
 function AuctionCard({ a }: { a: Auction }) {
   const { isOver, label } = useCountdown(a.endTime);
+  const imgSrc = useMemo(() => toImageSrc(a.image), [a.image]);
 
   return (
     <article className="group rounded-2xl overflow-hidden border border-border-light dark:border-border-dark bg-panel-light dark:bg-panel-dark shadow-sm hover:shadow-md transition">
       <div className="relative aspect-[4/3] overflow-hidden">
         <img
-          src={a.image ?? "/placeholder.png"}
+          src={imgSrc}
           alt={a.title}
           className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).src = PLACEHOLDER;
+          }}
         />
         {a.badge && (
           <span className="absolute left-3 top-3 rounded-full bg-secondary-light text-white text-xs font-medium px-2 py-0.5">
@@ -124,7 +153,9 @@ export default function BuyPage() {
         setLoading(true);
         const res = await fetch(
           `${API_BASE}/api/auctions?sort=latest&limit=100`,
-          { cache: "no-store" }
+          {
+            cache: "no-store",
+          }
         );
         if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
         const data = await res.json();

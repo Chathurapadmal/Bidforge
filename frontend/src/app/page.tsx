@@ -1,14 +1,12 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
-import AuctionCard from "./components/AuctionCard";
 import PhotoSlider from "./components/slider";
+import BuyPage from "./buy/page"; // 👈 import Buy page here
 
-// 👇 Match your backend DTO
 type AuctionDto = {
   id: number;
   title: string;
   currentBid: number;
-  // optional start time coming from the backend; add if missing
   startTime?: string;
   endTime: string;
   image?: string;
@@ -30,7 +28,7 @@ export default function Page() {
         });
         if (!res.ok) throw new Error(`Failed: ${res.status}`);
         const data = await res.json();
-        setAuctions(data.items ?? []); // your backend wraps results in { items: [...] }
+        setAuctions(data.items ?? []);
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -42,6 +40,7 @@ export default function Page() {
 
   return (
     <main className="p-6">
+      {/* ----- Top Photo Slider ----- */}
       <PhotoSlider
         images={[
           "bidf.jpg",
@@ -53,25 +52,42 @@ export default function Page() {
         ]}
       />
 
-      {error && <p className="text-red-500">{error}</p>}
-      {loading && <p>Loading auctions…</p>}
+      {/* ----- Featured Auctions Section ----- */}
+      {error && <p className="text-red-500 mt-6">{error}</p>}
+      {loading && <p className="mt-6">Loading featured auctions…</p>}
 
-      <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {auctions.map((a) => (
-          <AuctionCard
-            key={a.id}
-            auction={{
-              id: a.id,
-              title: a.title,
-              // your AuctionCard expects both startPrice + currentBid
-              startPrice: a.currentBid,
-              currentBid: a.currentBid,
-              startTime: a.startTime ?? "", // Provide startTime, fallback to empty string if missing
-              endTime: a.endTime,
-            }}
-          />
-        ))}
-      </div>
+      {!loading && !error && (
+        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {auctions.map((a) => (
+            <div
+              key={a.id}
+              className="border rounded-2xl p-4 bg-white hover:shadow transition"
+            >
+              <img
+                src={
+                  a.image
+                    ? a.image.startsWith("http")
+                      ? a.image
+                      : `https://localhost:7168/images/${a.image}`
+                    : "/placeholder.png"
+                }
+                alt={a.title}
+                className="w-full h-48 object-cover rounded-xl mb-2"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = "/placeholder.png";
+                }}
+              />
+              <h3 className="font-semibold text-sm line-clamp-2 mb-1">{a.title}</h3>
+              <p className="text-gray-600 text-xs">
+                Current Bid: <span className="font-semibold">LKR {a.currentBid}</span>
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ----- Integrated Buy Page ----- */}
+ 
     </main>
   );
 }

@@ -1,24 +1,26 @@
-// src/lib/imageUtils.ts (or inline above your component)
 export const PLACEHOLDER = "/placeholder.png";
 
 export function toImageSrc(img?: string | null): string {
   if (!img) return PLACEHOLDER;
   let s = img.trim();
   if (!s) return PLACEHOLDER;
-
   try {
     s = decodeURIComponent(s);
   } catch {}
 
-  // already absolute (http/https) — leave as-is
-  if (/^https?:\/\//i.test(s)) return s;
+  // absolute URL → return as-is
+  if (/^https?:\/\//i.test(s)) {
+    try {
+      const u = new URL(s);
+      if (u.pathname.startsWith("/images/")) return u.pathname; // prefer relative for rewrite
+      return s;
+    } catch {
+      return s;
+    }
+  }
 
-  // already a server path
+  // relative or filename
   if (s.startsWith("/images/")) return s;
-
-  // "images/foo.jpg" → "/images/foo.jpg"
   if (s.startsWith("images/")) return `/${s}`;
-
-  // bare filename → "/images/<filename>"
   return `/images/${encodeURIComponent(s)}`;
 }
