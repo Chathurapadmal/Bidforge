@@ -3,12 +3,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-
 type Auction = {
   id: number;
   title: string;
   description?: string | null;
-  image?: string | null; // absolute URL from API on reads
+  image?: string | null; // can be filename, /images/..., or absolute URL
   currentBid?: number | null;
   endTime?: string | null; // ISO string
   badge?: string | null;
@@ -16,7 +15,34 @@ type Auction = {
 };
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://localhost:7168";
+  (process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "")) ||
+  "http://localhost:7168"; // use http locally to avoid cert issues
+const PLACEHOLDER = "/placeholder.png";
+
+/** Normalize anything → absolute URL:
+ *  - absolute URL: keep
+ *  - "/images/foo.jpg": prefix API_BASE
+ *  - "foo.jpg" or "images/foo.jpg": build API_BASE + /images/...
+ */
+function toImageSrc(img?: string | null): string {
+  if (!img) return PLACEHOLDER;
+  let s = img.trim();
+  if (!s) return PLACEHOLDER;
+
+  try { s = decodeURIComponent(s); } catch {}
+
+  // Absolute URL
+  if (/^https?:\/\//i.test(s)) return s;
+
+  // "images/..." → "/images/..."
+  if (s.startsWith("images/")) s = `/${s}`;
+
+  // Server path
+  if (s.startsWith("/images/")) return `${API_BASE}${s}`;
+
+  // Bare filename
+  return `${API_BASE}/images/${encodeURIComponent(s)}`;
+}
 
 export default function AdminAuctionsPage() {
   const [items, setItems] = useState<Auction[]>([]);
@@ -34,7 +60,6 @@ export default function AdminAuctionsPage() {
 
   useEffect(() => {
     load();
-    // revoke preview on unmount
     return () => {
       if (filePreview) URL.revokeObjectURL(filePreview);
     };
@@ -45,13 +70,10 @@ export default function AdminAuctionsPage() {
     try {
       setErr(null);
       setLoading(true);
-      const res = await fetch(
-        `${API_BASE}/api/auctions?sort=latest&limit=100`,
-        {
-          cache: "no-store",
-          credentials: "include",
-        }
-      );
+      const res = await fetch(`${API_BASE}/api/auctions?sort=latest&limit=100`, {
+        cache: "no-store",
+        credentials: "include",
+      });
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
       const data = await res.json();
       setItems(Array.isArray(data.items) ? data.items : []);
@@ -106,20 +128,18 @@ export default function AdminAuctionsPage() {
         ? decodeURIComponent(new URL(data.url).pathname.split("/").pop() || "")
         : "");
 
-    if (!fileName)
-      throw new Error("Upload succeeded but no filename returned.");
-    return fileName; // IMPORTANT: filename only (e.g., IMG_123.webp)
+    if (!fileName) throw new Error("Upload succeeded but no filename returned.");
+    return fileName; // store filename only
   }
 
   async function createAuction(e: React.FormEvent) {
     e.preventDefault();
     try {
-      // upload first (returns filename)
       const imageFileName = await uploadImageIfNeeded();
 
       const payload = {
         title,
-        image: imageFileName, // filename only (backend sanitizes anyway)
+        image: imageFileName, // filename only
         currentBid: currentBid === "" ? 0 : Number(currentBid),
         endTime: endTime ? new Date(endTime).toISOString() : null,
         badge: badge || null,
@@ -138,7 +158,6 @@ export default function AdminAuctionsPage() {
         throw new Error(`${res.status} ${res.statusText}: ${txt}`);
       }
 
-      // reset form + reload
       setTitle("");
       setFile(null);
       if (filePreview) URL.revokeObjectURL(filePreview);
@@ -161,7 +180,7 @@ export default function AdminAuctionsPage() {
         credentials: "include",
         body: JSON.stringify({
           title: a.title ?? "",
-          image: a.image ?? null, // on edit, allow keeping existing
+          image: a.image ?? null, // keep existing filename or absolute
           description: a.description ?? null,
           currentBid: a.currentBid ?? 0,
           endTime: a.endTime ?? null,
@@ -233,14 +252,15 @@ export default function AdminAuctionsPage() {
                 src={filePreview}
                 alt="preview"
                 className="mt-2 h-24 w-24 object-cover rounded border border-gray-200 dark:border-gray-800"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = PLACEHOLDER;
+                }}
               />
             )}
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">
-              Starting / Current Price
-            </span>
+            <span className="text-sm font-medium">Starting / Current Price</span>
             <input
               className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               type="number"
@@ -311,18 +331,18 @@ export default function AdminAuctionsPage() {
               </thead>
               <tbody>
                 {items.map((a) => (
-                  <tr
-                    key={a.id}
-                    className="border-t border-gray-200/60 dark:border-gray-800"
-                  >
+                  <tr key={a.id} className="border-t border-gray-200/60 dark:border-gray-800">
                     <td className="p-2 align-top">{a.id}</td>
 
                     <td className="p-2 align-top">
                       {a.image ? (
                         <img
-                          src={a.image}
+                          src={toImageSrc(a.image)}
                           alt={a.title}
                           className="h-16 w-16 object-cover rounded border border-gray-200 dark:border-gray-800"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src = PLACEHOLDER;
+                          }}
                         />
                       ) : (
                         <span className="text-gray-400">—</span>
@@ -335,11 +355,7 @@ export default function AdminAuctionsPage() {
                         value={a.title ?? ""}
                         onChange={(e) =>
                           setItems((prev) =>
-                            prev.map((x) =>
-                              x.id === a.id
-                                ? { ...x, title: e.target.value }
-                                : x
-                            )
+                            prev.map((x) => (x.id === a.id ? { ...x, title: e.target.value } : x))
                           )
                         }
                       />
@@ -350,9 +366,7 @@ export default function AdminAuctionsPage() {
                         onChange={(e) =>
                           setItems((prev) =>
                             prev.map((x) =>
-                              x.id === a.id
-                                ? { ...x, description: e.target.value }
-                                : x
+                              x.id === a.id ? { ...x, description: e.target.value } : x
                             )
                           )
                         }
@@ -370,21 +384,17 @@ export default function AdminAuctionsPage() {
                             prev.map((x) =>
                               x.id === a.id
                                 ? {
-                                  ...x,
-                                  currentBid:
-                                    e.target.value === ""
-                                      ? 0
-                                      : Number(e.target.value),
-                                }
+                                    ...x,
+                                    currentBid:
+                                      e.target.value === "" ? 0 : Number(e.target.value),
+                                  }
                                 : x
                             )
                           )
                         }
                       />
                       <div className="text-xs text-gray-500 mt-1">
-                        {a.currentBid != null
-                          ? fmtMoney.format(a.currentBid)
-                          : "—"}
+                        {a.currentBid != null ? fmtMoney.format(a.currentBid) : "—"}
                       </div>
                     </td>
 
@@ -398,9 +408,7 @@ export default function AdminAuctionsPage() {
                             ? new Date(e.target.value).toISOString()
                             : null;
                           setItems((prev) =>
-                            prev.map((x) =>
-                              x.id === a.id ? { ...x, endTime: iso } : x
-                            )
+                            prev.map((x) => (x.id === a.id ? { ...x, endTime: iso } : x))
                           );
                         }}
                       />
@@ -412,11 +420,7 @@ export default function AdminAuctionsPage() {
                         value={a.badge ?? ""}
                         onChange={(e) =>
                           setItems((prev) =>
-                            prev.map((x) =>
-                              x.id === a.id
-                                ? { ...x, badge: e.target.value }
-                                : x
-                            )
+                            prev.map((x) => (x.id === a.id ? { ...x, badge: e.target.value } : x))
                           )
                         }
                       />

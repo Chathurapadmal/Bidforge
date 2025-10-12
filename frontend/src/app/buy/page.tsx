@@ -1,5 +1,7 @@
+// src/app/buy/page.tsx
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 type Auction = {
@@ -125,15 +127,18 @@ function AuctionCard({ a }: { a: Auction }) {
             </p>
           </div>
 
-          <a
-            href={`/auctions/${a.id}`}
+          <Link
+            href={`/productDetail/${a.id}`}
             className={`inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-medium text-white hover:opacity-90 ${
               isOver ? "bg-gray-400 cursor-not-allowed" : "bg-primary-light"
             }`}
             aria-disabled={isOver}
+            onClick={(e) => {
+              if (isOver) e.preventDefault();
+            }}
           >
-            {isOver ? "Closed" : "Place Bid"}
-          </a>
+            {isOver ? "Closed" : "Place Order"}
+          </Link>
         </div>
       </div>
     </article>
