@@ -1,117 +1,111 @@
-﻿// Controllers/AuctionsController.cs  (name can be anything, but route must match)
-using Bidforge.Data;
+﻿using Bidforge.Data;
+using Bidforge.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bidforge.Controllers;
 
 [ApiController]
-[Route("api/auctions")] // <-- force plural route (critical)
+[Route("api/auctions")]
 public class AuctionsController : ControllerBase
 {
     private readonly AppDbContext _db;
     public AuctionsController(AppDbContext db) => _db = db;
 
-    // GET /api/auctions?sort=latest&limit=100 ...
-    [HttpGet]
-    public async Task<IActionResult> Get(
-        [FromQuery] string? q,
-        [FromQuery] string? min,
-        [FromQuery] string? max,
-        [FromQuery] string? status = "all",
-        [FromQuery] string? badge = null,
-        [FromQuery] string? sort = "latest",
-        [FromQuery] int? limit = 100)
+    // ---------- DTO ----------
+    public class AuctionDto
     {
-        var now = DateTime.UtcNow;
-        var query = _db.Auctions.AsNoTracking().AsQueryable();
+        public string Title { get; set; } = "";
+        public string? Description { get; set; }
+        public string? Image { get; set; } // primary
+        public List<string>? Images { get; set; }
+        public decimal? CurrentBid { get; set; }
+        public DateTimeOffset? EndTime { get; set; }
+        public string? Badge { get; set; }
+    }
 
-        if (!string.IsNullOrWhiteSpace(q))
+    // ---------- GET all ----------
+    [HttpGet]
+    public async Task<IActionResult> Get([FromQuery] int limit = 100, [FromQuery] string? sort = "latest")
+    {
+        limit = Math.Clamp(limit, 1, 200);
+
+        IQueryable<Auction> q = _db.Auctions.AsNoTracking();
+
+        q = sort?.ToLowerInvariant() switch
         {
-            var k = q.Trim();
-            query = query.Where(a => a.Title.Contains(k) ||
-                                     (a.Description != null && a.Description.Contains(k)));
-        }
-
-        if (decimal.TryParse(min, out var minVal)) query = query.Where(a => a.CurrentBid >= minVal);
-        if (decimal.TryParse(max, out var maxVal)) query = query.Where(a => a.CurrentBid <= maxVal);
-
-        if (!string.IsNullOrWhiteSpace(badge))
-        {
-            var b = badge.Trim();
-            query = query.Where(a => a.Badge != null && a.Badge.Equals(b, StringComparison.OrdinalIgnoreCase));
-        }
-
-        status = (status ?? "all").ToLowerInvariant();
-        if (status == "open") query = query.Where(a => a.EndTime == null || a.EndTime > now);
-        if (status == "closed") query = query.Where(a => a.EndTime != null && a.EndTime <= now);
-
-        query = (sort ?? "latest").ToLowerInvariant() switch
-        {
-            "price_asc" => query.OrderBy(a => a.CurrentBid).ThenByDescending(a => a.CreatedAt),
-            "price_desc" => query.OrderByDescending(a => a.CurrentBid).ThenByDescending(a => a.CreatedAt),
-            "ending_soon" => query.OrderBy(a => a.EndTime ?? DateTime.MaxValue).ThenByDescending(a => a.CreatedAt),
-            _ => query.OrderByDescending(a => a.CreatedAt),
+            "latest" => q.OrderByDescending(a => a.CreatedAt),
+            "ending" => q.OrderBy(a => a.EndTime ?? DateTime.MaxValue),
+            _ => q.OrderByDescending(a => a.CreatedAt)
         };
 
-        var take = Math.Clamp(limit ?? 100, 1, 200);
-        var rows = await query.Take(take).ToListAsync();
-
-        var items = rows.Select(a => new {
-            id = a.Id,
-            title = a.Title,
-            description = a.Description,
-            image = NormalizeImage(a.Image),
-            images = a.GetImages().Select(NormalizeImage).ToArray(),
-            currentBid = a.CurrentBid,
-            endTime = a.EndTime?.ToString("o"),
-            badge = a.Badge,
-            createdAt = a.CreatedAt.ToString("o")
-        });
-
+        var items = await q.Take(limit).ToListAsync();
         var total = await _db.Auctions.CountAsync();
+
         return Ok(new { items, total });
     }
 
+    // ---------- GET by ID ----------
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
         var a = await _db.Auctions.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
-        if (a == null) return NotFound();
-
-        string NormalizeImage(string? s)
-        {
-            if (string.IsNullOrWhiteSpace(s)) return null!;
-            s = s.Trim();
-            if (s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-                s.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) return s;
-            if (s.StartsWith("/images/", StringComparison.OrdinalIgnoreCase)) return s;
-            if (s.StartsWith("images/", StringComparison.OrdinalIgnoreCase)) return "/" + s;
-            return "/images/" + Uri.EscapeDataString(s);
-        }
-
-        return Ok(new
-        {
-            id = a.Id,
-            title = a.Title,
-            description = a.Description,
-            image = NormalizeImage(a.Image),
-            images = a.GetImages().Select(NormalizeImage).ToArray(),
-            currentBid = a.CurrentBid,
-            endTime = a.EndTime?.ToString("o"),
-            badge = a.Badge,
-            createdAt = a.CreatedAt.ToString("o"),
-        });
+        return a is null ? NotFound() : Ok(a);
     }
 
-    private static string? NormalizeImage(string? s)
+    // ---------- CREATE ----------
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] AuctionDto dto)
     {
-        if (string.IsNullOrWhiteSpace(s)) return null;
-        s = s.Trim();
-        if (s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-            s.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) return s;
-        if (s.StartsWith("/images/", StringComparison.OrdinalIgnoreCase)) return s;
-        if (s.StartsWith("images/", StringComparison.OrdinalIgnoreCase)) return "/" + s;
-        return "/images/" + Uri.EscapeDataString(s);
+        if (string.IsNullOrWhiteSpace(dto.Title))
+            return BadRequest(new { message = "Title is required." });
+
+        var primary = dto.Images?.FirstOrDefault() ?? dto.Image;
+
+        var a = new Auction
+        {
+            Title = dto.Title.Trim(),
+            Description = dto.Description,
+            Image = primary,
+            CurrentBid = dto.CurrentBid ?? 0,
+            EndTime = dto.EndTime?.UtcDateTime,
+            Badge = dto.Badge,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _db.Auctions.Add(a);
+        await _db.SaveChangesAsync();
+
+        return CreatedAtAction(nameof(GetById), new { id = a.Id }, a);
+    }
+
+    // ---------- UPDATE ----------
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(int id, [FromBody] AuctionDto dto)
+    {
+        var a = await _db.Auctions.FirstOrDefaultAsync(x => x.Id == id);
+        if (a is null) return NotFound();
+
+        a.Title = string.IsNullOrWhiteSpace(dto.Title) ? a.Title : dto.Title.Trim();
+        a.Description = dto.Description;
+        a.Image = dto.Images?.FirstOrDefault() ?? dto.Image ?? a.Image;
+        a.CurrentBid = dto.CurrentBid ?? a.CurrentBid;
+        a.EndTime = dto.EndTime?.UtcDateTime ?? a.EndTime;
+        a.Badge = dto.Badge ?? a.Badge;
+
+        await _db.SaveChangesAsync();
+        return Ok(a);
+    }
+
+    // ---------- DELETE ----------
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var a = await _db.Auctions.FirstOrDefaultAsync(x => x.Id == id);
+        if (a is null) return NotFound();
+
+        _db.Auctions.Remove(a);
+        await _db.SaveChangesAsync();
+        return NoContent();
     }
 }

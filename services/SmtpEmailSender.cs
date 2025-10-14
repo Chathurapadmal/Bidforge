@@ -7,37 +7,43 @@ namespace Bidforge.Services
     public class SmtpEmailSender : IEmailSender
     {
         private readonly IConfiguration _config;
-
-        public SmtpEmailSender(IConfiguration config)
-        {
-            _config = config;
-        }
+        public SmtpEmailSender(IConfiguration config) => _config = config;
 
         public async Task SendEmailAsync(string to, string subject, string htmlBody)
         {
-            var email = _config.GetSection("Email");
-            var host = email["Host"];
-            var port = int.Parse(email["Port"]);
-            var username = email["UserName"];
-            var password = email["Password"];
-            var enableSsl = bool.Parse(email["EnableSSL"] ?? "true");
+            var e = _config.GetSection("Email");
+            var host = e["Host"] ?? "smtp.gmail.com";
+            var portStr = e["Port"];
+            var enableSslStr = e["EnableSSL"];
+
+            if (!int.TryParse(portStr, out var port)) port = 587;
+            var enableSsl = !string.IsNullOrWhiteSpace(enableSslStr)
+                ? bool.Parse(enableSslStr)
+                : true;
+
+            var username = e["UserName"];
+            var password = e["Password"];
+
+            if (string.IsNullOrWhiteSpace(username))
+                throw new InvalidOperationException("Email:UserName is not configured.");
 
             using var client = new SmtpClient(host, port)
             {
-                Credentials = new NetworkCredential(username, password),
+                Credentials = string.IsNullOrWhiteSpace(password)
+                    ? CredentialCache.DefaultNetworkCredentials
+                    : new NetworkCredential(username, password),
                 EnableSsl = enableSsl
             };
 
-            var message = new MailMessage
+            var from = new MailAddress(username, "Bidforge");
+            var msg = new MailMessage(from, new MailAddress(to))
             {
-                From = new MailAddress(username, "Bidforge"),
                 Subject = subject,
                 Body = htmlBody,
                 IsBodyHtml = true
             };
-            message.To.Add(to);
 
-            await client.SendMailAsync(message);
+            await client.SendMailAsync(msg);
         }
     }
 }

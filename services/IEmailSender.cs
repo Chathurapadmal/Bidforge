@@ -1,14 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
-
-public class AuthController : ControllerBase
+﻿namespace Bidforge.Services
 {
-    private readonly IEmailSender _emailSender;
-
-    public AuthController(IEmailSender emailSender)
+    public interface IEmailSender
     {
-        _emailSender = emailSender;
+        Task SendEmailAsync(string to, string subject, string htmlBody);
     }
-
-    // Inside Register()
-    await _emailSender.SendEmailAsync(user.Email, "Verify your Bidforge email", htmlBody);
 }

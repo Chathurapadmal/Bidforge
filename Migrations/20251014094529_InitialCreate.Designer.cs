@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bidforge.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251014055850_AuthIdentityInit")]
-    partial class AuthIdentityInit
+    [Migration("20251014094529_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

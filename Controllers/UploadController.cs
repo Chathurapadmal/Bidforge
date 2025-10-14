@@ -3,43 +3,52 @@
 namespace Bidforge.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
-public class UploadController(IWebHostEnvironment env) : ControllerBase
+[Route("api/upload")]
+public class UploadController : ControllerBase
 {
-    [HttpPost]
-    [RequestSizeLimit(20_000_000)] // ~20MB
-    public async Task<IActionResult> Post([FromForm] IFormFile file)
+    private readonly IWebHostEnvironment _env;
+
+    public UploadController(IWebHostEnvironment env)
     {
-        if (file == null || file.Length == 0) return BadRequest("No file provided.");
-
-        var imagesDir = Path.Combine(env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "images");
-        Directory.CreateDirectory(imagesDir);
-
-        var safeName = MakeSafeFileName(file.FileName);
-        var targetPath = Path.Combine(imagesDir, safeName);
-
-        // avoid overwrite
-        var nameOnly = Path.GetFileNameWithoutExtension(safeName);
-        var ext = Path.GetExtension(safeName);
-        int i = 1;
-        while (System.IO.File.Exists(targetPath))
-        {
-            safeName = $"{nameOnly}-{i++}{ext}";
-            targetPath = Path.Combine(imagesDir, safeName);
-        }
-
-        using var fs = new FileStream(targetPath, FileMode.CreateNew);
-        await file.CopyToAsync(fs);
-
-        var url = $"/images/{Uri.EscapeDataString(safeName)}";
-        return Ok(new { fileName = safeName, url });
+        _env = env;
     }
 
-    private static string MakeSafeFileName(string raw)
+    [HttpPost]
+    [RequestSizeLimit(25_000_000)]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Upload([FromForm] IFormFile file)
     {
-        var name = Path.GetFileName(raw);
-        foreach (var c in Path.GetInvalidFileNameChars())
-            name = name.Replace(c, '_');
-        return name.Replace(" ", "_");
+        if (file is null || file.Length == 0)
+            return BadRequest(new { message = "No file uploaded." });
+
+        // Ensure wwwroot/images exists
+        var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+        var imageDir = Path.Combine(webRoot, "images");
+        Directory.CreateDirectory(imageDir);
+
+        // Make safe unique filename
+        var safeName = Path.GetFileNameWithoutExtension(file.FileName)
+            .Replace(" ", "_")
+            .Replace("-", "_");
+        var ext = Path.GetExtension(file.FileName);
+        var finalName = $"{safeName}_{Guid.NewGuid():N}{ext}";
+        var fullPath = Path.Combine(imageDir, finalName);
+
+        // Save file
+        await using (var fs = new FileStream(fullPath, FileMode.Create))
+        {
+            await file.CopyToAsync(fs);
+        }
+
+        // Return relative and absolute URLs
+        var relUrl = $"/images/{Uri.EscapeDataString(finalName)}";
+        var absUrl = $"{Request.Scheme}://{Request.Host}{relUrl}";
+
+        return Ok(new
+        {
+            fileName = finalName,
+            url = relUrl,
+            fullUrl = absUrl
+        });
     }
 }

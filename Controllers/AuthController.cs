@@ -2,8 +2,8 @@
 using System.Security.Claims;
 using System.Text;
 using Bidforge.Data;
-using Bidforge.Models;
 using Bidforge.DTOs;
+using Bidforge.Models;              // <- use Models for LoginDto
 using Bidforge.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -18,10 +18,10 @@ namespace Bidforge.Controllers;
 [Route("api/[controller]")]
 public class AuthController(
     UserManager<ApplicationUser> userManager,
-    SignInManager<ApplicationUser> signInManager,
     IOptions<JwtOptions> jwtOptions,
     IWebHostEnvironment env,
-    IEmailSender emailSender) : ControllerBase
+    IEmailSender emailSender,
+    IConfiguration config) : ControllerBase
 {
     private readonly JwtOptions _jwt = jwtOptions.Value;
 
@@ -39,11 +39,13 @@ public class AuthController(
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> Register([FromForm] RegisterDto dto)
     {
-        if (!dto.AgreeTerms) return BadRequest(new { message = "You must agree to Terms & Conditions." });
+        if (!dto.AgreeTerms)
+            return BadRequest(new { message = "You must agree to Terms & Conditions." });
 
         var exists = await userManager.Users.AnyAsync(u =>
             u.Email == dto.Email || u.UserName == dto.UserName);
-        if (exists) return BadRequest(new { message = "Username or Email already exists." });
+        if (exists)
+            return BadRequest(new { message = "Username or Email already exists." });
 
         var user = new ApplicationUser
         {
@@ -76,10 +78,27 @@ public class AuthController(
         // email confirmation
         var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
         var encodedToken = Uri.EscapeDataString(token);
-        var confirmUrl = $"{Request.Scheme}://{Request.Host}/api/auth/confirm-email?userId={user.Id}&token={encodedToken}";
 
-        await emailSender.SendAsync(user.Email!, "Verify your email",
-            $"<p>Welcome to Bidforge, {user.UserName}!</p><p>Please verify your email by clicking:</p><p><a href='{confirmUrl}'>Confirm Email</a></p>");
+        // Prefer Frontend:BaseUrl for links (e.g., http://localhost:3000)
+        var frontBase = config["Frontend:BaseUrl"];
+        string confirmUrl;
+        if (!string.IsNullOrWhiteSpace(frontBase))
+        {
+            // Next.js verify page (recommended)
+            confirmUrl = $"{frontBase.TrimEnd('/')}/auth/verify?userId={user.Id}&token={encodedToken}";
+        }
+        else
+        {
+            // Fallback: API confirm endpoint
+            confirmUrl = $"{Request.Scheme}://{Request.Host}/api/auth/confirm-email?userId={user.Id}&token={encodedToken}";
+        }
+
+        await emailSender.SendEmailAsync(
+            user.Email!,
+            "Verify your Bidforge email",
+            $@"<p>Welcome to Bidforge, {System.Net.WebUtility.HtmlEncode(user.UserName)}!</p>
+               <p>Please verify your email by clicking:</p>
+               <p><a href=""{confirmUrl}"">Confirm Email</a></p>");
 
         return Ok(new { message = "Registered. Check your email to verify. Waiting for admin approval after verification." });
     }
@@ -96,24 +115,27 @@ public class AuthController(
         return Ok(new { message = "Email verified successfully." });
     }
 
-
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
-        ApplicationUser? user =
-            await userManager.FindByNameAsync(dto.UserNameOrEmail) ??
-            await userManager.FindByEmailAsync(dto.UserNameOrEmail);
+        var input = dto.UserNameOrEmail?.Trim() ?? string.Empty;
 
-        if (user == null) return Unauthorized(new { message = "Invalid credentials." });
+        ApplicationUser? user =
+            await userManager.FindByNameAsync(input) ??
+            await userManager.FindByEmailAsync(input);
+
+        if (user == null)
+            return Unauthorized(new { message = "Invalid credentials." });
 
         if (!user.EmailConfirmed)
-            return Unauthorized(new { message = "Please verify your email first." });
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Please verify your email first." });
 
         if (!user.IsApproved)
-            return Forbid(); // or: return Unauthorized(new { message = "Awaiting admin approval." });
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Awaiting admin approval." });
 
         var passOk = await userManager.CheckPasswordAsync(user, dto.Password);
-        if (!passOk) return Unauthorized(new { message = "Invalid credentials." });
+        if (!passOk)
+            return Unauthorized(new { message = "Invalid credentials." });
 
         var jwt = MakeJwt(user);
         return Ok(new
@@ -179,9 +201,3 @@ public class AuthController(
     }
 }
 
-public class JwtOptions
-{
-    public string Issuer { get; set; } = "";
-    public string Audience { get; set; } = "";
-    public string Key { get; set; } = "";
-}

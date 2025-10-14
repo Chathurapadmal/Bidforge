@@ -1,5 +1,6 @@
 ﻿using Bidforge.Data;
 using Bidforge.Models;
+using Bidforge.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 

@@ -1,17 +1,16 @@
+﻿using Bidforge.Data;
 using Bidforge.Controllers;
-using Bidforge.Data;
 using Bidforge.Models;
 using Bidforge.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// EF + Identity
+// ---------- EF + Identity ----------
 builder.Services.AddDbContext<AppDbContext>(opt =>
 {
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
@@ -28,11 +27,17 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(opts =>
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
-// JWT
+// ---------- JWT ----------
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
-var jwtKey = builder.Configuration["Jwt:Key"]!;
+
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey))
+    throw new InvalidOperationException("Jwt:Key is not configured.");
+
 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opts =>
     {
         opts.TokenValidationParameters = new TokenValidationParameters
@@ -46,31 +51,55 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// Email
-builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
-builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+// ---------- Email ----------
+builder.Services.AddTransient<IEmailSender, SmtpEmailSender>(); // ✅ keep only one registration
 
+// ---------- MVC / Controllers ----------
 builder.Services.AddControllers();
 
-// CORS (your Next.js)
+// ---------- CORS (Next.js) ----------
 builder.Services.AddCors(opt =>
 {
-    opt.AddPolicy("frontend", p =>
-        p.WithOrigins("http://localhost:3000", "https://localhost:3000", "http://127.0.0.1:3000", "https://127.0.0.1:3000")
-         .AllowAnyHeader()
-         .AllowAnyMethod()
-         .AllowCredentials());
+    opt.AddPolicy("frontend", p => p
+        .WithOrigins(
+            "http://localhost:3000",
+            "https://localhost:3000",
+            "http://127.0.0.1:3000",
+            "https://127.0.0.1:3000"
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials()
+    );
 });
+
+// (optional) Swagger in dev
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen();
+}
 
 var app = builder.Build();
 
+// (optional) Swagger in dev
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+// ---------- Pipeline ----------
 app.UseCors("frontend");
-app.UseStaticFiles(); // serves /uploads and /images
+app.UseStaticFiles();      // serves /uploads and /images
+app.UseHttpsRedirection(); // optional but recommended
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
-// apply migrations
+// ---------- apply migrations ----------
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
