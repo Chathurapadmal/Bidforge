@@ -1,54 +1,82 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "D:\\Programs\\C#\\Bidforge\\",
+  "WorkspaceRootPath": "E:\\Bidforge\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Programs\\C#\\Bidforge\\Controllers\\AuctionsController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Controllers\\AuctionsController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Programs\\C#\\Bidforge\\Controllers\\HealthController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Controllers\\HealthController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\dtos\\logindto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:dtos\\logindto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Programs\\C#\\Bidforge\\Controllers\\UploadController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Controllers\\UploadController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Programs\\C#\\Bidforge\\Data\\AppDbContext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Data\\AppDbContext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\services\\iemailsender.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:services\\iemailsender.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Programs\\C#\\Bidforge\\Data\\DbSeeder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Data\\DbSeeder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Programs\\C#\\Bidforge\\DTOs\\AuctionRequests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:DTOs\\AuctionRequests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\services\\smtpemailsender.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:services\\smtpemailsender.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Programs\\C#\\Bidforge\\DTOs\\AuctionSummaryDto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:DTOs\\AuctionSummaryDto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\controllers\\adminuserscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:controllers\\adminuserscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Programs\\C#\\Bidforge\\Model\\Auction.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Model\\Auction.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\data\\appdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:data\\appdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Programs\\C#\\Bidforge\\Model\\Bid.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Model\\Bid.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\models\\applicationuser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:models\\applicationuser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Programs\\C#\\Bidforge\\Program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\controllers\\auctioncontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:controllers\\auctioncontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Programs\\C#\\Bidforge\\appsettings.Development.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:appsettings.Development.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\controllers\\auctionbidscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:controllers\\auctionbidscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Programs\\C#\\Bidforge\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\models\\bid.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:models\\bid.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\data\\seed.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:data\\seed.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\bidforge.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:bidforge.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\controllers\\uploadcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:controllers\\uploadcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\models\\auction.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:models\\auction.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\dtos\\auctionlistresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:dtos\\auctionlistresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|e:\\bidforge\\dtos\\auctionlistitemdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B074351F-6176-49E7-9746-6C7787082D05}|Bidforge.csproj|solutionrelative:dtos\\auctionlistitemdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -58,162 +86,254 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 7,
+          "SelectedChildIndex": 2,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "Auction.cs",
-              "DocumentMoniker": "D:\\Programs\\C#\\Bidforge\\Model\\Auction.cs",
-              "RelativeDocumentMoniker": "Model\\Auction.cs",
-              "ToolTip": "D:\\Programs\\C#\\Bidforge\\Model\\Auction.cs",
-              "RelativeToolTip": "Model\\Auction.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAtAAAAAAAAAA==",
+              "DocumentIndex": 1,
+              "Title": "LoginDto.cs",
+              "DocumentMoniker": "E:\\Bidforge\\DTOs\\LoginDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\LoginDto.cs",
+              "ToolTip": "E:\\Bidforge\\DTOs\\LoginDto.cs",
+              "RelativeToolTip": "DTOs\\LoginDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-30T09:06:41.048Z",
+              "WhenOpened": "2025-10-14T07:04:21.126Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 6,
-              "Title": "AuctionSummaryDto.cs",
-              "DocumentMoniker": "D:\\Programs\\C#\\Bidforge\\DTOs\\AuctionSummaryDto.cs",
-              "RelativeDocumentMoniker": "DTOs\\AuctionSummaryDto.cs",
-              "ToolTip": "D:\\Programs\\C#\\Bidforge\\DTOs\\AuctionSummaryDto.cs",
-              "RelativeToolTip": "DTOs\\AuctionSummaryDto.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAAAAAAAAAAAA==",
+              "Title": "AdminUsersController.cs",
+              "DocumentMoniker": "E:\\Bidforge\\Controllers\\AdminUsersController.cs",
+              "RelativeDocumentMoniker": "Controllers\\AdminUsersController.cs",
+              "ToolTip": "E:\\Bidforge\\Controllers\\AdminUsersController.cs",
+              "RelativeToolTip": "Controllers\\AdminUsersController.cs",
+              "ViewState": "AgIAADMAAAAAAAAAAAAwwFUAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-30T09:07:11.482Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "AuctionRequests.cs",
-              "DocumentMoniker": "D:\\Programs\\C#\\Bidforge\\DTOs\\AuctionRequests.cs",
-              "RelativeDocumentMoniker": "DTOs\\AuctionRequests.cs",
-              "ToolTip": "D:\\Programs\\C#\\Bidforge\\DTOs\\AuctionRequests.cs",
-              "RelativeToolTip": "DTOs\\AuctionRequests.cs",
-              "ViewState": "AgIAAAYAAAAAAAAAAAAwwA0AAAAnAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-30T14:23:12.654Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "DbSeeder.cs",
-              "DocumentMoniker": "D:\\Programs\\C#\\Bidforge\\Data\\DbSeeder.cs",
-              "RelativeDocumentMoniker": "Data\\DbSeeder.cs",
-              "ToolTip": "D:\\Programs\\C#\\Bidforge\\Data\\DbSeeder.cs",
-              "RelativeToolTip": "Data\\DbSeeder.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-30T09:11:44.82Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "AppDbContext.cs",
-              "DocumentMoniker": "D:\\Programs\\C#\\Bidforge\\Data\\AppDbContext.cs",
-              "RelativeDocumentMoniker": "Data\\AppDbContext.cs",
-              "ToolTip": "D:\\Programs\\C#\\Bidforge\\Data\\AppDbContext.cs",
-              "RelativeToolTip": "Data\\AppDbContext.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABoAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-30T09:07:39.748Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "UploadController.cs",
-              "DocumentMoniker": "D:\\Programs\\C#\\Bidforge\\Controllers\\UploadController.cs",
-              "RelativeDocumentMoniker": "Controllers\\UploadController.cs",
-              "ToolTip": "D:\\Programs\\C#\\Bidforge\\Controllers\\UploadController.cs",
-              "RelativeToolTip": "Controllers\\UploadController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACoAAAAjAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-30T14:50:35.393Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "HealthController.cs",
-              "DocumentMoniker": "D:\\Programs\\C#\\Bidforge\\Controllers\\HealthController.cs",
-              "RelativeDocumentMoniker": "Controllers\\HealthController.cs",
-              "ToolTip": "D:\\Programs\\C#\\Bidforge\\Controllers\\HealthController.cs",
-              "RelativeToolTip": "Controllers\\HealthController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-30T08:53:02.194Z",
+              "WhenOpened": "2025-10-14T05:58:18.39Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "AuctionsController.cs",
-              "DocumentMoniker": "D:\\Programs\\C#\\Bidforge\\Controllers\\AuctionsController.cs",
-              "RelativeDocumentMoniker": "Controllers\\AuctionsController.cs",
-              "ToolTip": "D:\\Programs\\C#\\Bidforge\\Controllers\\AuctionsController.cs",
-              "RelativeToolTip": "Controllers\\AuctionsController.cs",
-              "ViewState": "AgIAAGQAAAAAAAAAAAAwwIkAAAAAAAAAAAAAAA==",
+              "Title": "AuthController.cs",
+              "DocumentMoniker": "E:\\Bidforge\\Controllers\\AuthController.cs",
+              "RelativeDocumentMoniker": "Controllers\\AuthController.cs",
+              "ToolTip": "E:\\Bidforge\\Controllers\\AuthController.cs",
+              "RelativeToolTip": "Controllers\\AuthController.cs",
+              "ViewState": "AgIAAAcAAAAAAAAAAAAtwBcAAAAEAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-30T09:10:15.01Z",
+              "WhenOpened": "2025-10-14T05:57:50.728Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "SmtpEmailSender.cs",
+              "DocumentMoniker": "E:\\Bidforge\\services\\SmtpEmailSender.cs",
+              "RelativeDocumentMoniker": "services\\SmtpEmailSender.cs",
+              "ToolTip": "E:\\Bidforge\\services\\SmtpEmailSender.cs",
+              "RelativeToolTip": "services\\SmtpEmailSender.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACsAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-14T05:57:08.583Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "IEmailSender.cs",
+              "DocumentMoniker": "E:\\Bidforge\\services\\IEmailSender.cs",
+              "RelativeDocumentMoniker": "services\\IEmailSender.cs",
+              "ToolTip": "E:\\Bidforge\\services\\IEmailSender.cs",
+              "RelativeToolTip": "services\\IEmailSender.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-14T05:56:18.696Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 8,
-              "Title": "Bid.cs",
-              "DocumentMoniker": "D:\\Programs\\C#\\Bidforge\\Model\\Bid.cs",
-              "RelativeDocumentMoniker": "Model\\Bid.cs",
-              "ToolTip": "D:\\Programs\\C#\\Bidforge\\Model\\Bid.cs",
-              "RelativeToolTip": "Model\\Bid.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAuAAAAAAAAAA==",
+              "Title": "ApplicationUser.cs",
+              "DocumentMoniker": "E:\\Bidforge\\Models\\ApplicationUser.cs",
+              "RelativeDocumentMoniker": "Models\\ApplicationUser.cs",
+              "ToolTip": "E:\\Bidforge\\Models\\ApplicationUser.cs",
+              "RelativeToolTip": "Models\\ApplicationUser.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-01T04:52:19.484Z",
+              "WhenOpened": "2025-10-14T05:54:48.093Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 4,
               "Title": "Program.cs",
-              "DocumentMoniker": "D:\\Programs\\C#\\Bidforge\\Program.cs",
+              "DocumentMoniker": "E:\\Bidforge\\Program.cs",
               "RelativeDocumentMoniker": "Program.cs",
-              "ToolTip": "D:\\Programs\\C#\\Bidforge\\Program.cs",
+              "ToolTip": "E:\\Bidforge\\Program.cs",
               "RelativeToolTip": "Program.cs",
-              "ViewState": "AgIAAAkAAAAAAAAAAAAAABMAAABHAAAAAAAAAA==",
+              "ViewState": "AgIAACEAAAAAAAAAAAAAADEAAAA/AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-30T07:20:00.062Z",
+              "WhenOpened": "2025-10-14T02:28:50.997Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "E:\\Bidforge\\appsettings.json",
+              "RelativeDocumentMoniker": "appsettings.json",
+              "ToolTip": "E:\\Bidforge\\appsettings.json",
+              "RelativeToolTip": "appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAMAAAAGAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-10-14T02:28:19.62Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 10,
-              "Title": "appsettings.Development.json",
-              "DocumentMoniker": "D:\\Programs\\C#\\Bidforge\\appsettings.Development.json",
-              "RelativeDocumentMoniker": "appsettings.Development.json",
-              "ToolTip": "D:\\Programs\\C#\\Bidforge\\appsettings.Development.json",
-              "RelativeToolTip": "appsettings.Development.json",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAAAAAAAAAAAA==",
+              "Title": "AuctionBidsController.cs",
+              "DocumentMoniker": "E:\\Bidforge\\Controllers\\AuctionBidsController.cs",
+              "RelativeDocumentMoniker": "Controllers\\AuctionBidsController.cs",
+              "ToolTip": "E:\\Bidforge\\Controllers\\AuctionBidsController.cs",
+              "RelativeToolTip": "Controllers\\AuctionBidsController.cs",
+              "ViewState": "AgIAAC0AAAAAAAAAAAAmwFEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-14T03:32:00.12Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "launchSettings.json",
+              "DocumentMoniker": "E:\\Bidforge\\Properties\\launchSettings.json",
+              "RelativeDocumentMoniker": "Properties\\launchSettings.json",
+              "ToolTip": "E:\\Bidforge\\Properties\\launchSettings.json",
+              "RelativeToolTip": "Properties\\launchSettings.json",
+              "ViewState": "AgIAAAUAAAAAAAAAAAAiwCUAAAAHAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-10-01T04:15:07.037Z",
+              "WhenOpened": "2025-10-14T02:52:46.359Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "UploadController.cs",
+              "DocumentMoniker": "E:\\Bidforge\\Controllers\\UploadController.cs",
+              "RelativeDocumentMoniker": "Controllers\\UploadController.cs",
+              "ToolTip": "E:\\Bidforge\\Controllers\\UploadController.cs",
+              "RelativeToolTip": "Controllers\\UploadController.cs",
+              "ViewState": "AgIAAAkAAAAAAAAAAAAmwBoAAAAwAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-14T02:40:13.168Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 11,
-              "Title": "appsettings.json",
-              "DocumentMoniker": "D:\\Programs\\C#\\Bidforge\\appsettings.json",
-              "RelativeDocumentMoniker": "appsettings.json",
-              "ToolTip": "D:\\Programs\\C#\\Bidforge\\appsettings.json",
-              "RelativeToolTip": "appsettings.json",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAAwAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-09-30T06:40:43.024Z"
+              "Title": "Bid.cs",
+              "DocumentMoniker": "E:\\Bidforge\\Models\\Bid.cs",
+              "RelativeDocumentMoniker": "Models\\Bid.cs",
+              "ToolTip": "E:\\Bidforge\\Models\\Bid.cs",
+              "RelativeToolTip": "Models\\Bid.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-14T02:33:31.215Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "AuctionController.cs",
+              "DocumentMoniker": "E:\\Bidforge\\Controllers\\AuctionController.cs",
+              "RelativeDocumentMoniker": "Controllers\\AuctionController.cs",
+              "ToolTip": "E:\\Bidforge\\Controllers\\AuctionController.cs",
+              "RelativeToolTip": "Controllers\\AuctionController.cs",
+              "ViewState": "AgIAAEIAAAAAAAAAAAAiwHUAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-14T02:30:49.212Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "AppDbContext.cs",
+              "DocumentMoniker": "E:\\Bidforge\\Data\\AppDbContext.cs",
+              "RelativeDocumentMoniker": "Data\\AppDbContext.cs",
+              "ToolTip": "E:\\Bidforge\\Data\\AppDbContext.cs",
+              "RelativeToolTip": "Data\\AppDbContext.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAIwB0AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-14T02:17:39.559Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "Auction.cs",
+              "DocumentMoniker": "E:\\Bidforge\\Models\\Auction.cs",
+              "RelativeDocumentMoniker": "Models\\Auction.cs",
+              "ToolTip": "E:\\Bidforge\\Models\\Auction.cs",
+              "RelativeToolTip": "Models\\Auction.cs",
+              "ViewState": "AgIAAAgAAAAAAAAAAAAmwCwAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-14T02:29:39.955Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": "AuctionListResponse.cs",
+              "DocumentMoniker": "E:\\Bidforge\\DTOs\\AuctionListResponse.cs",
+              "RelativeDocumentMoniker": "DTOs\\AuctionListResponse.cs",
+              "ToolTip": "E:\\Bidforge\\DTOs\\AuctionListResponse.cs",
+              "RelativeToolTip": "DTOs\\AuctionListResponse.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAATAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-14T02:21:17.744Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 18,
+              "Title": "AuctionListItemDto.cs",
+              "DocumentMoniker": "E:\\Bidforge\\DTOs\\AuctionListItemDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\AuctionListItemDto.cs",
+              "ToolTip": "E:\\Bidforge\\DTOs\\AuctionListItemDto.cs",
+              "RelativeToolTip": "DTOs\\AuctionListItemDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAATAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-14T02:21:09.127Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "Bidforge",
+              "DocumentMoniker": "E:\\Bidforge\\Bidforge.csproj",
+              "RelativeDocumentMoniker": "Bidforge.csproj",
+              "ToolTip": "E:\\Bidforge\\Bidforge.csproj",
+              "RelativeToolTip": "Bidforge.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABoAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2025-10-14T02:20:44.935Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "Seed.cs",
+              "DocumentMoniker": "E:\\Bidforge\\Data\\Seed.cs",
+              "RelativeDocumentMoniker": "Data\\Seed.cs",
+              "ToolTip": "E:\\Bidforge\\Data\\Seed.cs",
+              "RelativeToolTip": "Data\\Seed.cs",
+              "ViewState": "AgIAABAAAAAAAAAAAAAmwDQAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-14T02:17:54.38Z",
+              "EditorCaption": ""
             }
           ]
         }

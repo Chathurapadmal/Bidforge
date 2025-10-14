@@ -1,4 +1,4 @@
-@Bidforge_HostAddress = http://localhost:5062
+@Bidforge_HostAddress = http://localhost:5184
 
 GET {{Bidforge_HostAddress}}/weatherforecast/
 Accept: application/json

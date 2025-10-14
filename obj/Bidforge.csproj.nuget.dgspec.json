@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Programs\\C#\\Bidforge\\Bidforge.csproj": {}
+    "E:\\Bidforge\\Bidforge.csproj": {}
   },
   "projects": {
-    "D:\\Programs\\C#\\Bidforge\\Bidforge.csproj": {
+    "E:\\Bidforge\\Bidforge.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Programs\\C#\\Bidforge\\Bidforge.csproj",
+        "projectUniqueName": "E:\\Bidforge\\Bidforge.csproj",
         "projectName": "Bidforge",
-        "projectPath": "D:\\Programs\\C#\\Bidforge\\Bidforge.csproj",
+        "projectPath": "E:\\Bidforge\\Bidforge.csproj",
         "packagesPath": "C:\\Users\\Chathura\\.nuget\\packages\\",
-        "outputPath": "D:\\Programs\\C#\\Bidforge\\obj\\",
+        "outputPath": "E:\\Bidforge\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "D:\\Softwares\\VS sdk\\NuGetPackages"
@@ -50,25 +50,31 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
+            "Microsoft.AspNetCore.Authentication.JwtBearer": {
+              "target": "Package",
+              "version": "[8.0.6, )"
+            },
+            "Microsoft.AspNetCore.Identity.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[8.0.6, )"
+            },
             "Microsoft.EntityFrameworkCore": {
               "target": "Package",
-              "version": "[9.0.9, )"
-            },
-            "Microsoft.EntityFrameworkCore.Design": {
-              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
-              "suppressParent": "All",
-              "target": "Package",
-              "version": "[9.0.9, )"
+              "version": "[8.0.6, )"
             },
             "Microsoft.EntityFrameworkCore.SqlServer": {
               "target": "Package",
-              "version": "[9.0.9, )"
+              "version": "[8.0.6, )"
             },
             "Microsoft.EntityFrameworkCore.Tools": {
               "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
               "suppressParent": "All",
               "target": "Package",
-              "version": "[9.0.9, )"
+              "version": "[8.0.6, )"
+            },
+            "Microsoft.IdentityModel.Tokens": {
+              "target": "Package",
+              "version": "[8.0.2, )"
             },
             "Swashbuckle.AspNetCore": {
               "target": "Package",

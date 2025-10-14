@@ -89,7 +89,7 @@ export default function Navbar() {
           <Link href="/" className={linkClasses("/")}>
             Home
           </Link>
-          <Link href="/auctions" className={linkClasses("/auctions")}>
+          <Link href="/buy" className={linkClasses("/buy")}>
             Auctions
           </Link>
 

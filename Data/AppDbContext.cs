@@ -1,11 +1,14 @@
 ﻿using Bidforge.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bidforge.Data;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public class AppDbContext(DbContextOptions<AppDbContext> options)
+    : IdentityDbContext<ApplicationUser>(options)
 {
     public DbSet<Auction> Auctions => Set<Auction>();
+    public DbSet<Bid> Bids => Set<Bid>();
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
@@ -15,9 +18,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
           .Property(a => a.CurrentBid)
           .HasColumnType("decimal(18,2)");
 
-        mb.Entity<Auction>()
-          .Property(a => a.CreatedAt)
-          .HasDefaultValueSql("SYSUTCDATETIME()");
+        mb.Entity<Bid>()
+          .Property(b => b.Amount)
+          .HasColumnType("decimal(18,2)");
 
         mb.Entity<Auction>()
           .HasIndex(a => a.CreatedAt)

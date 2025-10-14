@@ -1,5 +1,5 @@
 
-// src/app/services/api/AuthApi.ts
+// src/app/services/api/Bidforge.ts
 import { http } from "./http";
 
 export type User = {
@@ -13,7 +13,7 @@ export type AuthResponse = {
   user: User;
 };
 
-export const AuthApi = {
+export const Bidforge = {
   me: (token: string) => http<User>("/api/auth/me", {}, token),
   login: (email: string, password: string) =>
     http<AuthResponse>("/api/auth/login", {

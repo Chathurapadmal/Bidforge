@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import PhotoSlider from "./components/slider";
 import Hero from "./components/hero";
+import ProductGrid from "./components/productGrid";
 
 type AuctionDto = {
   id: number;
@@ -16,9 +17,7 @@ type AuctionDto = {
   badge?: string | null;
 };
 
-const API_BASE =
-  (process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "")) ||
-  "http://localhost:7168";
+import { API_BASE } from "../lib/config";
 const PLACEHOLDER = "/placeholder.png";
 
 /* ---------- utils ---------- */
@@ -26,15 +25,20 @@ function toImageSrc(img?: string | null): string {
   if (!img) return PLACEHOLDER;
   let s = img.trim();
   if (!s) return PLACEHOLDER;
-  try { s = decodeURIComponent(s); } catch {}
-  if (/^https?:\/\//i.test(s)) return s;        // absolute URL
-  if (s.startsWith("images/")) s = `/${s}`;     // "images/x" -> "/images/x"
+  try {
+    s = decodeURIComponent(s);
+  } catch {}
+  if (/^https?:\/\//i.test(s)) return s; // absolute URL
+  if (s.startsWith("images/")) s = `/${s}`; // "images/x" -> "/images/x"
   if (s.startsWith("/images/")) return `${API_BASE}${s}`; // server path
-  return `${API_BASE}/images/${encodeURIComponent(s)}`;   // bare filename
+  return `${API_BASE}/images/${encodeURIComponent(s)}`; // bare filename
 }
 
 function useCountdown(endIso?: string | null) {
-  const end = useMemo(() => (endIso ? new Date(endIso).getTime() : 0), [endIso]);
+  const end = useMemo(
+    () => (endIso ? new Date(endIso).getTime() : 0),
+    [endIso]
+  );
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -50,10 +54,9 @@ function useCountdown(endIso?: string | null) {
   const isOver = diff <= 0;
   const label = isOver
     ? "Ended"
-    : `${d > 0 ? `${d}d ` : ""}${String(h).padStart(2, "0")}:${String(m).padStart(
-        2,
-        "0"
-      )}:${String(sec).padStart(2, "0")}`;
+    : `${d > 0 ? `${d}d ` : ""}${String(h).padStart(2, "0")}:${String(
+        m
+      ).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
   return { isOver, label };
 }
 
@@ -74,7 +77,9 @@ function FeaturedAuctionCard({ a }: { a: AuctionDto }) {
           alt={a.title}
           className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
-          onError={(e) => { (e.currentTarget as HTMLImageElement).src = PLACEHOLDER; }}
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).src = PLACEHOLDER;
+          }}
         />
         {a.badge && (
           <span className="absolute left-3 top-3 rounded-full bg-fuchsia-500 text-white text-xs font-medium px-2 py-0.5">
@@ -93,11 +98,15 @@ function FeaturedAuctionCard({ a }: { a: AuctionDto }) {
       </div>
 
       <div className="p-4">
-        <h3 className="line-clamp-2 text-sm font-semibold min-h-[2.5rem]">{a.title}</h3>
+        <h3 className="line-clamp-2 text-sm font-semibold min-h-[2.5rem]">
+          {a.title}
+        </h3>
         <div className="mt-2 flex items-center justify-between">
           <div>
             <p className="text-xs text-gray-600">Current bid</p>
-            <p className="text-base font-semibold">LKR {fmtCurrencyLKR(a.currentBid)}</p>
+            <p className="text-base font-semibold">
+              LKR {fmtCurrencyLKR(a.currentBid)}
+            </p>
           </div>
           <Link
             href={`/productDetail/${a.id}`}
@@ -105,7 +114,9 @@ function FeaturedAuctionCard({ a }: { a: AuctionDto }) {
               isOver ? "bg-gray-400 cursor-not-allowed" : "bg-indigo-600"
             }`}
             aria-disabled={isOver}
-            onClick={(e) => { if (isOver) e.preventDefault(); }}
+            onClick={(e) => {
+              if (isOver) e.preventDefault();
+            }}
           >
             {isOver ? "Closed" : "Place Order"}
           </Link>
@@ -126,9 +137,12 @@ export default function Page() {
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch(`${API_BASE}/api/auctions?sort=endingSoon&limit=12`, {
-          cache: "no-store",
-        });
+        const res = await fetch(
+          `${API_BASE}/api/auctions?sort=endingSoon&limit=12`,
+          {
+            cache: "no-store",
+          }
+        );
         if (!res.ok) throw new Error(`Failed: ${res.status}`);
         const data = await res.json();
         setAuctions(data.items ?? []);
@@ -155,30 +169,22 @@ export default function Page() {
         {/* Top Photo Slider */}
         <div className="mt-2">
           <PhotoSlider
-            images={[
-              "slide1.jpg",
-              "slide2.jpg",
-              "slide3.jpg",
-              "slide4.webp",
-            ]}
+            images={["slide1.jpg", "slide2.jpg", "slide3.jpg", "slide4.webp"]}
           />
         </div>
 
         {/* Featured Auctions */}
         {error && <p className="text-red-600 mt-6">{error}</p>}
-        {loading && <p className="mt-6 text-gray-600">Loading featured auctions…</p>}
+        {loading && (
+          <p className="mt-6 text-gray-600">Loading featured auctions…</p>
+        )}
 
         {!loading && !error && (
-          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {auctions.map((a) => (
-              <FeaturedAuctionCard key={a.id} a={a} />
-            ))}
+          <div className="mt-6 ">
+            <ProductGrid />
           </div>
         )}
       </main>
-
-      {/* bottom divider to match hero */}
-
     </section>
   );
 }

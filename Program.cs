@@ -1,70 +1,80 @@
-﻿using Microsoft.AspNetCore.Http.Features;
-using Microsoft.EntityFrameworkCore;
+using Bidforge.Controllers;
 using Bidforge.Data;
+using Bidforge.Models;
+using Bidforge.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// EF Core
+// EF + Identity
 builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// Controllers + Swagger
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-// CORS for Next.js
-builder.Services.AddCors(o =>
 {
-    o.AddPolicy("AllowFrontend", p => p
-        .WithOrigins("http://localhost:3000", "https://localhost:3000")
-        .AllowAnyHeader()
-        .AllowAnyMethod());
+    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 
-// Multipart form limits
-builder.Services.Configure<FormOptions>(o =>
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(opts =>
 {
-    o.MultipartBodyLengthLimit = 20 * 1024 * 1024; // 20MB
+    opts.Password.RequireDigit = false;
+    opts.Password.RequireUppercase = false;
+    opts.Password.RequireNonAlphanumeric = false;
+    opts.User.RequireUniqueEmail = true;
+    opts.SignIn.RequireConfirmedEmail = true; // must verify email
+})
+.AddEntityFrameworkStores<AppDbContext>()
+.AddDefaultTokenProviders();
+
+// JWT
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
+var jwtKey = builder.Configuration["Jwt:Key"]!;
+var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(opts =>
+    {
+        opts.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = key
+        };
+    });
+
+// Email
+builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
+builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+
+builder.Services.AddControllers();
+
+// CORS (your Next.js)
+builder.Services.AddCors(opt =>
+{
+    opt.AddPolicy("frontend", p =>
+        p.WithOrigins("http://localhost:3000", "https://localhost:3000", "http://127.0.0.1:3000", "https://127.0.0.1:3000")
+         .AllowAnyHeader()
+         .AllowAnyMethod()
+         .AllowCredentials());
 });
 
 var app = builder.Build();
 
-// Auto-migrate (optional)
+app.UseCors("frontend");
+app.UseStaticFiles(); // serves /uploads and /images
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
+
+// apply migrations
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
-    await DbSeeder.SeedAsync(db);
 }
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-app.UseHttpsRedirection();
-app.UseCors("AllowFrontend");
-
-// Serve /wwwroot files -> /images/*
-app.UseStaticFiles();
-
-// Map attribute-routed controllers
-app.MapControllers();
-
-// Debug route to list all endpoints (helps verify)
-app.MapGet("/_debug/routes", (IEnumerable<EndpointDataSource> sources) =>
-{
-    var routes = sources
-        .SelectMany(s => s.Endpoints)
-        .OfType<RouteEndpoint>()
-        .Select(e => new {
-            Pattern = e.RoutePattern.RawText,
-            Methods = string.Join(",", e.Metadata.OfType<HttpMethodMetadata>().FirstOrDefault()?.HttpMethods ?? new List<string>())
-        });
-    return Results.Ok(routes);
-});
-
-app.MapGet("/", () => "✅ Bidforge API running. Go to /swagger for docs.");
 app.Run();

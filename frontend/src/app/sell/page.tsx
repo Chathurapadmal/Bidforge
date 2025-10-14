@@ -1,4 +1,3 @@
-// app/admin/auctions/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -7,40 +6,31 @@ type Auction = {
   id: number;
   title: string;
   description?: string | null;
-  image?: string | null; // can be filename, /images/..., or absolute URL
+  image?: string | null; // legacy single image (filename or URL-ish)
+  images?: string[] | null; // NEW: multiple image filenames
   currentBid?: number | null;
-  endTime?: string | null; // ISO string
+  endTime?: string | null; // ISO
   badge?: string | null;
-  createdAt: string; // ISO string
+  createdAt: string; // ISO
 };
 
-const API_BASE =
-  (process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "")) ||
-  "http://localhost:7168"; // use http locally to avoid cert issues
+import { API_BASE } from "../../lib/config";
 const PLACEHOLDER = "/placeholder.png";
 
-/** Normalize anything → absolute URL:
- *  - absolute URL: keep
- *  - "/images/foo.jpg": prefix API_BASE
- *  - "foo.jpg" or "images/foo.jpg": build API_BASE + /images/...
- */
+/** Normalize anything → absolute URL */
 function toImageSrc(img?: string | null): string {
   if (!img) return PLACEHOLDER;
   let s = img.trim();
   if (!s) return PLACEHOLDER;
+  try {
+    s = decodeURIComponent(s);
+  } catch {}
 
-  try { s = decodeURIComponent(s); } catch {}
+  if (/^https?:\/\//i.test(s)) return s; // absolute
+  if (s.startsWith("images/")) s = `/${s}`; // "images/x" -> "/images/x"
+  if (s.startsWith("/images/")) return `${API_BASE}${s}`; // server path
 
-  // Absolute URL
-  if (/^https?:\/\//i.test(s)) return s;
-
-  // "images/..." → "/images/..."
-  if (s.startsWith("images/")) s = `/${s}`;
-
-  // Server path
-  if (s.startsWith("/images/")) return `${API_BASE}${s}`;
-
-  // Bare filename
+  // bare filename
   return `${API_BASE}/images/${encodeURIComponent(s)}`;
 }
 
@@ -51,8 +41,8 @@ export default function AdminAuctionsPage() {
 
   // create form state
   const [title, setTitle] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [files, setFiles] = useState<File[]>([]); // NEW multiple files
+  const [filePreviews, setFilePreviews] = useState<string[]>([]); // NEW previews[]
   const [currentBid, setCurrentBid] = useState("");
   const [endTime, setEndTime] = useState("");
   const [badge, setBadge] = useState("");
@@ -61,7 +51,8 @@ export default function AdminAuctionsPage() {
   useEffect(() => {
     load();
     return () => {
-      if (filePreview) URL.revokeObjectURL(filePreview);
+      // cleanup previews
+      filePreviews.forEach((u) => URL.revokeObjectURL(u));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -70,10 +61,13 @@ export default function AdminAuctionsPage() {
     try {
       setErr(null);
       setLoading(true);
-      const res = await fetch(`${API_BASE}/api/auctions?sort=latest&limit=100`, {
-        cache: "no-store",
-        credentials: "include",
-      });
+      const res = await fetch(
+        `${API_BASE}/api/auctions?sort=latest&limit=100`,
+        {
+          cache: "no-store",
+          credentials: "include",
+        }
+      );
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
       const data = await res.json();
       setItems(Array.isArray(data.items) ? data.items : []);
@@ -98,11 +92,10 @@ export default function AdminAuctionsPage() {
     []
   );
 
-  async function uploadImageIfNeeded(): Promise<string | null> {
-    if (!file) return null;
-
+  /** Upload one file → returns filename string (server keeps only filename) */
+  async function uploadSingle(f: File): Promise<string> {
     const form = new FormData();
-    form.append("file", file);
+    form.append("file", f);
 
     const res = await fetch(`${API_BASE}/api/upload`, {
       method: "POST",
@@ -121,25 +114,38 @@ export default function AdminAuctionsPage() {
       );
     }
 
-    // server returns { url, fileName }
-    const fileName =
+    const fileName: string =
       data?.fileName ??
       (typeof data?.url === "string"
         ? decodeURIComponent(new URL(data.url).pathname.split("/").pop() || "")
         : "");
 
-    if (!fileName) throw new Error("Upload succeeded but no filename returned.");
-    return fileName; // store filename only
+    if (!fileName)
+      throw new Error("Upload succeeded but no filename returned.");
+    return fileName;
+  }
+
+  /** Upload all selected files in parallel → returns filenames[] */
+  async function uploadAllSelected(): Promise<string[]> {
+    if (!files.length) return [];
+    const names = await Promise.all(files.map(uploadSingle));
+    return names;
   }
 
   async function createAuction(e: React.FormEvent) {
     e.preventDefault();
     try {
-      const imageFileName = await uploadImageIfNeeded();
+      // 1) upload all selected images (if any)
+      const uploadedNames = await uploadAllSelected(); // ["a.jpg","b.png",...]
 
-      const payload = {
+      // 2) choose first as legacy single image for backwards-compat
+      const primary = uploadedNames[0] ?? null;
+
+      // 3) build payload (send both 'image' and 'images' if your API supports)
+      const payload: any = {
         title,
-        image: imageFileName, // filename only
+        image: primary, // filename only (legacy)
+        images: uploadedNames, // NEW multiple filenames
         currentBid: currentBid === "" ? 0 : Number(currentBid),
         endTime: endTime ? new Date(endTime).toISOString() : null,
         badge: badge || null,
@@ -158,10 +164,11 @@ export default function AdminAuctionsPage() {
         throw new Error(`${res.status} ${res.statusText}: ${txt}`);
       }
 
+      // reset form
       setTitle("");
-      setFile(null);
-      if (filePreview) URL.revokeObjectURL(filePreview);
-      setFilePreview(null);
+      setFiles([]);
+      filePreviews.forEach((u) => URL.revokeObjectURL(u));
+      setFilePreviews([]);
       setCurrentBid("");
       setEndTime("");
       setBadge("");
@@ -181,6 +188,7 @@ export default function AdminAuctionsPage() {
         body: JSON.stringify({
           title: a.title ?? "",
           image: a.image ?? null, // keep existing filename or absolute
+          // images?: [] → manage via a separate UI/endpoint if you like
           description: a.description ?? null,
           currentBid: a.currentBid ?? 0,
           endTime: a.endTime ?? null,
@@ -234,33 +242,63 @@ export default function AdminAuctionsPage() {
             />
           </label>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Upload Image</span>
+          {/* Multiple file picker */}
+          <label className="flex flex-col gap-1 md:col-span-2 lg:col-span-3">
+            <span className="text-sm font-medium">Upload Images</span>
             <input
               className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded p-2 file:mr-3 file:rounded file:border-0 file:px-3 file:py-2 file:bg-blue-600 file:text-white hover:file:opacity-90"
               type="file"
               accept="image/*"
+              multiple
               onChange={(e) => {
-                const f = e.target.files?.[0] ?? null;
-                setFile(f);
-                if (filePreview) URL.revokeObjectURL(filePreview);
-                setFilePreview(f ? URL.createObjectURL(f) : null);
+                const fs = Array.from(e.target.files ?? []);
+                // clean old previews
+                filePreviews.forEach((u) => URL.revokeObjectURL(u));
+                setFiles(fs);
+                setFilePreviews(fs.map((f) => URL.createObjectURL(f)));
               }}
             />
-            {filePreview && (
-              <img
-                src={filePreview}
-                alt="preview"
-                className="mt-2 h-24 w-24 object-cover rounded border border-gray-200 dark:border-gray-800"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = PLACEHOLDER;
-                }}
-              />
+
+            {/* Previews grid */}
+            {filePreviews.length > 0 && (
+              <div className="mt-2 grid grid-cols-3 sm:grid-cols-5 gap-2">
+                {filePreviews.map((src, i) => (
+                  <div key={i} className="relative">
+                    <img
+                      src={src}
+                      alt={`preview ${i + 1}`}
+                      className="h-24 w-full object-cover rounded border border-gray-200 dark:border-gray-800"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = PLACEHOLDER;
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-1 top-1 rounded-full bg-black/60 text-white text-xs px-2 py-0.5"
+                      onClick={() => {
+                        // remove one file+preview
+                        setFiles((prev) => prev.filter((_, idx) => idx !== i));
+                        setFilePreviews((prev) => {
+                          const url = prev[i];
+                          URL.revokeObjectURL(url);
+                          return prev.filter((_, idx) => idx !== i);
+                        });
+                      }}
+                      aria-label="remove image"
+                      title="Remove"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Starting / Current Price</span>
+            <span className="text-sm font-medium">
+              Starting / Current Price
+            </span>
             <input
               className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               type="number"
@@ -304,6 +342,7 @@ export default function AdminAuctionsPage() {
             <button
               className="px-4 py-2 rounded bg-blue-600 text-white hover:opacity-90"
               type="submit"
+              disabled={false}
             >
               Create Auction
             </button>
@@ -321,7 +360,7 @@ export default function AdminAuctionsPage() {
               <thead className="bg-gray-50 dark:bg-gray-800/50">
                 <tr className="border-b border-gray-200/60 dark:border-gray-800">
                   <th className="p-2 text-left">ID</th>
-                  <th className="p-2 text-left">Image</th>
+                  <th className="p-2 text-left">Images</th>
                   <th className="p-2 text-left">Title</th>
                   <th className="p-2 text-left">Bid</th>
                   <th className="p-2 text-left">Ends</th>
@@ -330,119 +369,156 @@ export default function AdminAuctionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {items.map((a) => (
-                  <tr key={a.id} className="border-t border-gray-200/60 dark:border-gray-800">
-                    <td className="p-2 align-top">{a.id}</td>
+                {items.map((a) => {
+                  const imgs =
+                    a.images && a.images.length > 0
+                      ? a.images
+                      : a.image
+                        ? [a.image]
+                        : [];
+                  const first = imgs[0];
+                  const extra = Math.max(imgs.length - 1, 0);
+                  return (
+                    <tr
+                      key={a.id}
+                      className="border-t border-gray-200/60 dark:border-gray-800"
+                    >
+                      <td className="p-2 align-top">{a.id}</td>
 
-                    <td className="p-2 align-top">
-                      {a.image ? (
-                        <img
-                          src={toImageSrc(a.image)}
-                          alt={a.title}
-                          className="h-16 w-16 object-cover rounded border border-gray-200 dark:border-gray-800"
-                          onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).src = PLACEHOLDER;
+                      <td className="p-2 align-top">
+                        {first ? (
+                          <div className="relative inline-block">
+                            <img
+                              src={toImageSrc(first)}
+                              alt={a.title}
+                              className="h-16 w-16 object-cover rounded border border-gray-200 dark:border-gray-800"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).src =
+                                  PLACEHOLDER;
+                              }}
+                            />
+                            {extra > 0 && (
+                              <span className="absolute -right-2 -top-2 rounded-full bg-blue-600 text-white text-[10px] px-1.5 py-0.5">
+                                +{extra}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+
+                      <td className="p-2 align-top">
+                        <input
+                          className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded p-1 w-56 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={a.title ?? ""}
+                          onChange={(e) =>
+                            setItems((prev) =>
+                              prev.map((x) =>
+                                x.id === a.id
+                                  ? { ...x, title: e.target.value }
+                                  : x
+                              )
+                            )
+                          }
+                        />
+                        <textarea
+                          className="mt-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded p-1 w-56 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Description"
+                          value={a.description ?? ""}
+                          onChange={(e) =>
+                            setItems((prev) =>
+                              prev.map((x) =>
+                                x.id === a.id
+                                  ? { ...x, description: e.target.value }
+                                  : x
+                              )
+                            )
+                          }
+                        />
+                      </td>
+
+                      <td className="p-2 align-top">
+                        <input
+                          className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded p-1 w-28 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          type="number"
+                          step="0.01"
+                          value={a.currentBid ?? 0}
+                          onChange={(e) =>
+                            setItems((prev) =>
+                              prev.map((x) =>
+                                x.id === a.id
+                                  ? {
+                                      ...x,
+                                      currentBid:
+                                        e.target.value === ""
+                                          ? 0
+                                          : Number(e.target.value),
+                                    }
+                                  : x
+                              )
+                            )
+                          }
+                        />
+                        <div className="text-xs text-gray-500 mt-1">
+                          {a.currentBid != null
+                            ? fmtMoney.format(a.currentBid)
+                            : "—"}
+                        </div>
+                      </td>
+
+                      <td className="p-2 align-top">
+                        <input
+                          className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded p-1 w-56 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          type="datetime-local"
+                          value={safeDateLocal(a.endTime)}
+                          onChange={(e) => {
+                            const iso = e.target.value
+                              ? new Date(e.target.value).toISOString()
+                              : null;
+                            setItems((prev) =>
+                              prev.map((x) =>
+                                x.id === a.id ? { ...x, endTime: iso } : x
+                              )
+                            );
                           }}
                         />
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
+                      </td>
 
-                    <td className="p-2 align-top">
-                      <input
-                        className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded p-1 w-56 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={a.title ?? ""}
-                        onChange={(e) =>
-                          setItems((prev) =>
-                            prev.map((x) => (x.id === a.id ? { ...x, title: e.target.value } : x))
-                          )
-                        }
-                      />
-                      <textarea
-                        className="mt-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded p-1 w-56 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Description"
-                        value={a.description ?? ""}
-                        onChange={(e) =>
-                          setItems((prev) =>
-                            prev.map((x) =>
-                              x.id === a.id ? { ...x, description: e.target.value } : x
+                      <td className="p-2 align-top">
+                        <input
+                          className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded p-1 w-32 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={a.badge ?? ""}
+                          onChange={(e) =>
+                            setItems((prev) =>
+                              prev.map((x) =>
+                                x.id === a.id
+                                  ? { ...x, badge: e.target.value }
+                                  : x
+                              )
                             )
-                          )
-                        }
-                      />
-                    </td>
+                          }
+                        />
+                      </td>
 
-                    <td className="p-2 align-top">
-                      <input
-                        className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded p-1 w-28 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        type="number"
-                        step="0.01"
-                        value={a.currentBid ?? 0}
-                        onChange={(e) =>
-                          setItems((prev) =>
-                            prev.map((x) =>
-                              x.id === a.id
-                                ? {
-                                    ...x,
-                                    currentBid:
-                                      e.target.value === "" ? 0 : Number(e.target.value),
-                                  }
-                                : x
-                            )
-                          )
-                        }
-                      />
-                      <div className="text-xs text-gray-500 mt-1">
-                        {a.currentBid != null ? fmtMoney.format(a.currentBid) : "—"}
-                      </div>
-                    </td>
-
-                    <td className="p-2 align-top">
-                      <input
-                        className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded p-1 w-56 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        type="datetime-local"
-                        value={safeDateLocal(a.endTime)}
-                        onChange={(e) => {
-                          const iso = e.target.value
-                            ? new Date(e.target.value).toISOString()
-                            : null;
-                          setItems((prev) =>
-                            prev.map((x) => (x.id === a.id ? { ...x, endTime: iso } : x))
-                          );
-                        }}
-                      />
-                    </td>
-
-                    <td className="p-2 align-top">
-                      <input
-                        className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded p-1 w-32 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={a.badge ?? ""}
-                        onChange={(e) =>
-                          setItems((prev) =>
-                            prev.map((x) => (x.id === a.id ? { ...x, badge: e.target.value } : x))
-                          )
-                        }
-                      />
-                    </td>
-
-                    <td className="p-2 align-top space-x-2">
-                      <button
-                        className="px-3 py-1 rounded bg-blue-600 text-white hover:opacity-90"
-                        onClick={() => saveAuction(a)}
-                      >
-                        Save
-                      </button>
-                      <button
-                        className="px-3 py-1 rounded bg-red-600 text-white hover:opacity-90"
-                        onClick={() => deleteAuction(a.id)}
-                        title="Delete"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      <td className="p-2 align-top space-x-2">
+                        <button
+                          className="px-3 py-1 rounded bg-blue-600 text-white hover:opacity-90"
+                          onClick={() => saveAuction(a)}
+                        >
+                          Save
+                        </button>
+                        <button
+                          className="px-3 py-1 rounded bg-red-600 text-white hover:opacity-90"
+                          onClick={() => deleteAuction(a.id)}
+                          title="Delete"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
 
                 {items.length === 0 && !loading && (
                   <tr>

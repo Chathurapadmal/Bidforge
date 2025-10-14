@@ -1,46 +1,45 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 
-namespace Bidforge.Controllers
+namespace Bidforge.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class UploadController(IWebHostEnvironment env) : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class UploadController : ControllerBase
+    [HttpPost]
+    [RequestSizeLimit(20_000_000)] // ~20MB
+    public async Task<IActionResult> Post([FromForm] IFormFile file)
     {
-        private readonly IWebHostEnvironment _env;
-        private readonly IConfiguration _config;
+        if (file == null || file.Length == 0) return BadRequest("No file provided.");
 
-        public UploadController(IWebHostEnvironment env, IConfiguration config)
+        var imagesDir = Path.Combine(env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "images");
+        Directory.CreateDirectory(imagesDir);
+
+        var safeName = MakeSafeFileName(file.FileName);
+        var targetPath = Path.Combine(imagesDir, safeName);
+
+        // avoid overwrite
+        var nameOnly = Path.GetFileNameWithoutExtension(safeName);
+        var ext = Path.GetExtension(safeName);
+        int i = 1;
+        while (System.IO.File.Exists(targetPath))
         {
-            _env = env;
-            _config = config;
+            safeName = $"{nameOnly}-{i++}{ext}";
+            targetPath = Path.Combine(imagesDir, safeName);
         }
 
-        [HttpPost]
-        [RequestSizeLimit(20_000_000)] 
-        public async Task<IActionResult> Post([FromForm] IFormFile file)
-        {
-            if (file is null || file.Length == 0)
-                return BadRequest("No file");
+        using var fs = new FileStream(targetPath, FileMode.CreateNew);
+        await file.CopyToAsync(fs);
 
-            var configuredPath = _config["FrontendImagesPath"];
-            string imagesDir = !string.IsNullOrWhiteSpace(configuredPath)
-                ? Path.GetFullPath(Path.Combine(_env.ContentRootPath, configuredPath))
-                : Path.GetFullPath(Path.Combine(_env.ContentRootPath, "..", "frontend", "public", "images"));
+        var url = $"/images/{Uri.EscapeDataString(safeName)}";
+        return Ok(new { fileName = safeName, url });
+    }
 
-            Directory.CreateDirectory(imagesDir);
-
-            var baseName = Path.GetFileNameWithoutExtension(file.FileName);
-            var ext = Path.GetExtension(file.FileName);
-            var safeBase = string.Concat(baseName.Where(c => char.IsLetterOrDigit(c) || c == '-' || c == '_'));
-            if (string.IsNullOrWhiteSpace(safeBase)) safeBase = "upload";
-            var unique = $"{safeBase}_{DateTime.UtcNow:yyyyMMddHHmmssfff}{ext}";
-            var savePath = Path.Combine(imagesDir, unique);
-
-            await using (var fs = new FileStream(savePath, FileMode.Create))
-                await file.CopyToAsync(fs);
-
-            var url = $"/images/{unique}";
-            return Ok(new { url });
-        }
+    private static string MakeSafeFileName(string raw)
+    {
+        var name = Path.GetFileName(raw);
+        foreach (var c in Path.GetInvalidFileNameChars())
+            name = name.Replace(c, '_');
+        return name.Replace(" ", "_");
     }
 }
