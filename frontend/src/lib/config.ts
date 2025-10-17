@@ -8,7 +8,8 @@ const fallback =
     : "http://localhost:5184";
 
 export const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL &&
-  process.env.NEXT_PUBLIC_API_BASE_URL.trim().length > 0
-    ? process.env.NEXT_PUBLIC_API_BASE_URL
-    : fallback;
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://localhost:7168";
+process.env.NEXT_PUBLIC_API_BASE_URL &&
+process.env.NEXT_PUBLIC_API_BASE_URL.trim().length > 0
+  ? process.env.NEXT_PUBLIC_API_BASE_URL
+  : fallback;

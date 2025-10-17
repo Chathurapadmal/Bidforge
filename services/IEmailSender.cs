@@ -1,7 +1,6 @@
-﻿namespace Bidforge.Services
+﻿namespace Bidforge.Services;
+
+public interface IEmailSender
 {
-    public interface IEmailSender
-    {
-        Task SendEmailAsync(string to, string subject, string htmlBody);
-    }
+    Task SendEmailAsync(string to, string subject, string htmlBody, CancellationToken ct = default);
 }

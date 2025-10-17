@@ -14,6 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     {
         base.OnModelCreating(mb);
 
+        // Auction money columns
         mb.Entity<Auction>()
           .Property(a => a.CurrentBid)
           .HasColumnType("decimal(18,2)");
@@ -22,8 +23,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
           .Property(b => b.Amount)
           .HasColumnType("decimal(18,2)");
 
+        // Auction.CreatedAt default + index (if your Auction has CreatedAt)
+        mb.Entity<Auction>()
+          .Property(a => a.CreatedAt)
+          .HasDefaultValueSql("SYSUTCDATETIME()");
+
         mb.Entity<Auction>()
           .HasIndex(a => a.CreatedAt)
           .HasDatabaseName("IX_Auctions_CreatedAt");
+
+        // ApplicationUser.CreatedAt default + index  ✅ (corrected)
+        mb.Entity<ApplicationUser>()
+          .Property(u => u.CreatedAt)
+          .HasDefaultValueSql("SYSUTCDATETIME()");
+
+        mb.Entity<ApplicationUser>()
+          .HasIndex(u => u.CreatedAt);
     }
 }

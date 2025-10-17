@@ -1,21 +1,17 @@
-// app/productDetail/[id]/page.tsx
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { API_BASE } from "../../../lib/config";
 
 type Auction = {
   id: number;
   title: string;
   description?: string | null;
-
-  // any of these may come from backend
-  imageUrls?: string[] | null; // absolute URLs
-  imagePaths?: string[] | null; // "/images/..."
-  images?: string[] | null; // filenames only
-  image?: string | null; // legacy single
-
+  imageUrls?: string[] | null;
+  imagePaths?: string[] | null;
+  images?: string[] | null;
+  image?: string | null;
   currentBid?: number | null;
   startingPrice?: number | null;
   startTime?: string | null;
@@ -27,30 +23,50 @@ type Auction = {
 type BidDto = {
   id: number;
   amount: number;
-  bidder?: string | null;
+  bidderId?: string | null;
+  bidder?: string | null; // display name
   createdAt: string; // ISO
 };
 
 const PLACEHOLDER = "/placeholder.png";
 const MIN_INCREMENT = 100;
 
-/** Normalize anything -> absolute URL suitable for <img src> */
 function toImageSrc(img?: string | null) {
   if (!img) return PLACEHOLDER;
   let s = img.trim();
   try {
     s = decodeURIComponent(s);
   } catch {}
-  if (/^https?:\/\//i.test(s)) return s; // absolute
-  if (s.startsWith("images/")) s = `/${s}`; // "images/x" -> "/images/x"
-  if (s.startsWith("/images/")) return `${API_BASE}${s}`; // server path
-  return `${API_BASE}/images/${encodeURIComponent(s)}`; // bare filename
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.startsWith("images/")) s = `/${s}`;
+  if (s.startsWith("/images/")) return `${API_BASE}${s}`;
+  return `${API_BASE}/images/${encodeURIComponent(s)}`;
 }
 
 export default function Page() {
   const params = useParams();
+  const router = useRouter();
+
   const idStr = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const id = Number(idStr);
+
+  // 🔐 gate using cookie session
+  const [authChecked, setAuthChecked] = useState(false);
+  useEffect(() => {
+    (async () => {
+      const res = await fetch(`${API_BASE}/api/auth/me`, {
+        credentials: "include",
+      });
+      if (res.status === 401) {
+        router.replace(
+          `/auth/login?next=${encodeURIComponent(`/productDetail/${idStr}`)}`
+        );
+        return;
+      }
+      setAuthChecked(true);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idStr]);
 
   const [data, setData] = useState<Auction | null>(null);
   const [bids, setBids] = useState<BidDto[]>([]);
@@ -60,22 +76,19 @@ export default function Page() {
   const [posting, setPosting] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   const gallery = useMemo(() => {
     if (!data) return [PLACEHOLDER];
-
     if (Array.isArray(data.imageUrls) && data.imageUrls.length)
       return data.imageUrls.map(toImageSrc);
     if (Array.isArray(data.imagePaths) && data.imagePaths.length)
       return data.imagePaths.map(toImageSrc);
     if (Array.isArray(data.images) && data.images.length)
       return data.images.map(toImageSrc);
-
-    if (typeof data.image === "string" && data.image.includes(",")) {
-      return data.image.split(",").map((s) => toImageSrc(s));
-    }
+    if (typeof data.image === "string" && data.image.includes(","))
+      return data.image.split(",").map(toImageSrc);
     if (data.image) return [toImageSrc(data.image)];
-
     return [PLACEHOLDER];
   }, [data]);
 
@@ -88,10 +101,8 @@ export default function Page() {
       setLoading(false);
       return;
     }
-
-    const controller = new AbortController();
-    const { signal } = controller;
-    let isMounted = true;
+    if (abortRef.current) abortRef.current.abort();
+    abortRef.current = new AbortController();
 
     setLoading(true);
     setErr(null);
@@ -103,16 +114,29 @@ export default function Page() {
 
     try {
       const [aRes, bRes] = await Promise.all([
-        fetch(auctionUrl, { cache: "no-store", signal }),
-        fetch(bidsUrl, { cache: "no-store", signal }),
+        fetch(auctionUrl, {
+          cache: "no-store",
+          signal: abortRef.current.signal,
+          credentials: "include",
+        }),
+        fetch(bidsUrl, {
+          cache: "no-store",
+          signal: abortRef.current.signal,
+          credentials: "include",
+        }),
       ]);
 
+      if (aRes.status === 401 || aRes.status === 403) {
+        router.replace(
+          `/auth/login?next=${encodeURIComponent(`/productDetail/${idStr}`)}`
+        );
+        return;
+      }
+
       if (aRes.status === 404) {
-        if (isMounted) {
-          setData(null);
-          setBids([]);
-          setNotFound(true);
-        }
+        setData(null);
+        setBids([]);
+        setNotFound(true);
         return;
       }
 
@@ -123,34 +147,32 @@ export default function Page() {
         );
       }
 
-      const aJson = await aRes.json().catch(() => null);
-      if (isMounted) setData(aJson);
+      setData(await aRes.json().catch(() => null));
 
       if (bRes.ok) {
         const bJson = await bRes.json().catch(() => ({}));
         const list = Array.isArray(bJson.items) ? bJson.items : [];
-        if (isMounted) setBids(list);
-      } else if (isMounted) setBids([]);
+        setBids(list);
+      } else if (bRes.status === 401 || bRes.status === 403) {
+        router.replace(
+          `/auth/login?next=${encodeURIComponent(`/productDetail/${idStr}`)}`
+        );
+        return;
+      } else {
+        setBids([]);
+      }
     } catch (e: any) {
-      if (!signal.aborted && isMounted) setErr(e?.message ?? "Failed to load");
+      if (e?.name !== "AbortError") setErr(e?.message ?? "Failed to load");
     } finally {
-      if (isMounted) setLoading(false);
+      setLoading(false);
     }
-
-    return () => {
-      isMounted = false;
-      controller.abort();
-    };
-  }, [id]);
+  }, [id, idStr, router]);
 
   useEffect(() => {
-    const p = loadAll();
-    return () => {
-      p.then((cleanup) => typeof cleanup === "function" && cleanup()).catch(
-        () => {}
-      );
-    };
-  }, [loadAll]);
+    if (!authChecked) return;
+    loadAll();
+    return () => abortRef.current?.abort();
+  }, [authChecked, loadAll]);
 
   async function placeBid(e: React.FormEvent) {
     e.preventDefault();
@@ -184,13 +206,19 @@ export default function Page() {
 
       const res = await fetch(`${API_BASE}/api/auctions/${id}/bids`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount }),
       });
 
-      const json = await res.json().catch(() => null);
+      if (res.status === 401 || res.status === 403) {
+        router.replace(
+          `/auth/login?next=${encodeURIComponent(`/productDetail/${idStr}`)}`
+        );
+        return;
+      }
 
+      const json = await res.json().catch(() => null);
       if (!res.ok) {
         const msg =
           json?.message || `Bid failed: ${res.status} ${res.statusText}`;
@@ -208,9 +236,10 @@ export default function Page() {
     }
   }
 
-  // ---------- render states ----------
+  // ----- render states -----
   if (!Number.isFinite(id) || id <= 0)
     return <main className="p-6">Invalid product id</main>;
+  if (!authChecked) return <main className="p-6">Checking session…</main>;
   if (loading) return <main className="p-6">Loading…</main>;
   if (notFound) {
     return (
@@ -227,14 +256,27 @@ export default function Page() {
   if (err && !data) return <main className="p-6 text-red-600">{err}</main>;
   if (!data) return <main className="p-6">Not found</main>;
 
-  // ---------- main UI ----------
+  // mark "You" in recent bids using /api/auth/me (no JWT parsing)
+  const [meId, setMeId] = useState<string | null>(null);
+  useEffect(() => {
+    (async () => {
+      const r = await fetch(`${API_BASE}/api/auth/me`, {
+        credentials: "include",
+      });
+      if (r.ok) {
+        const j = await r.json().catch(() => null);
+        setMeId(j?.userId ?? null);
+      }
+    })();
+  }, []);
+
   return (
     <main className="min-h-screen bg-white text-gray-900">
       <div className="max-w-6xl mx-auto px-6 py-8">
         <h1 className="text-2xl font-bold mb-4">{data.title}</h1>
 
         <div className="grid gap-8 lg:grid-cols-2">
-          {/* LEFT: all photos */}
+          {/* LEFT: photos */}
           <section className="bg-white border border-gray-200 rounded-xl p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {gallery.map((src, i) => (
@@ -303,8 +345,8 @@ export default function Page() {
                 Last bid:{" "}
                 <span className="font-semibold">
                   {Math.floor(lastBid).toLocaleString()}
-                </span>{" "}
-                · Minimum next:{" "}
+                </span>
+                {" · "}Minimum next:{" "}
                 <span className="font-semibold">
                   {minNext.toLocaleString()}
                 </span>
@@ -340,18 +382,24 @@ export default function Page() {
               <div className="pt-4">
                 <h4 className="font-semibold mb-2 text-sm">Recent bids</h4>
                 <ul className="space-y-1 text-sm">
-                  {bids.map((b) => (
-                    <li
-                      key={b.id}
-                      className="flex justify-between gap-2 border-b border-gray-100 pb-1"
-                    >
-                      <span>{b.bidder ?? "Guest"}</span>
-                      <span>LKR {Math.floor(b.amount).toLocaleString()}</span>
-                      <span className="text-gray-500">
-                        {new Date(b.createdAt).toLocaleString()}
-                      </span>
-                    </li>
-                  ))}
+                  {bids.map((b) => {
+                    const who =
+                      b.bidderId && meId && b.bidderId === meId
+                        ? "You"
+                        : (b.bidder ?? "Guest");
+                    return (
+                      <li
+                        key={b.id}
+                        className="flex justify-between gap-2 border-b border-gray-100 pb-1"
+                      >
+                        <span>{who}</span>
+                        <span>LKR {Math.floor(b.amount).toLocaleString()}</span>
+                        <span className="text-gray-500">
+                          {new Date(b.createdAt).toLocaleString()}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}

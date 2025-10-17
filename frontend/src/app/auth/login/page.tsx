@@ -2,8 +2,9 @@
 "use client";
 
 import { useState } from "react";
-import { API_BASE } from "../../../lib/config";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { API_BASE } from "../../../lib/config";
 
 export default function LoginPage() {
   const [idOrEmail, setIdOrEmail] = useState("");
@@ -11,6 +12,10 @@ export default function LoginPage() {
   const [err, setErr] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") || "/profile"; // redirect to /profile by default
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,11 +27,13 @@ export default function LoginPage() {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include", // IMPORTANT: set cookie
         body: JSON.stringify({
           UserNameOrEmail: idOrEmail,
           Password: password,
         }),
       });
+
       const json = await res.json().catch(() => null);
 
       if (!res.ok) {
@@ -38,10 +45,9 @@ export default function LoginPage() {
         return;
       }
 
-      // store JWT
-      localStorage.setItem("token", json.token);
       setInfo("Logged in ✅");
       setPassword("");
+      router.replace(next);
     } catch (e: any) {
       setErr(e?.message ?? "Login failed");
     } finally {
@@ -99,7 +105,7 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-4 text-sm text-gray-600">
-          Don’t have an account?{" "}
+          Don’t have an account{" "}
           <Link className="text-blue-600 underline" href="/auth/register">
             Register
           </Link>

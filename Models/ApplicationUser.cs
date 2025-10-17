@@ -1,17 +1,23 @@
 ﻿using Microsoft.AspNetCore.Identity;
 
-namespace Bidforge.Models;
-
-public class ApplicationUser : IdentityUser
+namespace Bidforge.Models
 {
-    // Extra fields
-    public string? FullName { get; set; }          // optional
-    public string? NicNumber { get; set; }
-    public string? MobileNumber { get; set; }
+    public class ApplicationUser : IdentityUser
+    {
+        // Approval + timestamps
+        public bool IsApproved { get; set; } = false;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    public string? SelfiePath { get; set; }        // /uploads/selfies/xxx.jpg
-    public string? NicImagePath { get; set; }      // /uploads/nics/xxx.jpg
+        // Profile (used in UI)
+        public string? FullName { get; set; }
+        public string MobileNumber { get; set; } = "";
+        public string NicNumber { get; set; } = "";
 
-    public bool IsApproved { get; set; }           // set by admin
-    public DateTime? TermsAcceptedAt { get; set; } // when user accepted T&C
+        // KYC upload paths
+        public string? SelfiePath { get; set; }
+        public string? NicImagePath { get; set; }
+
+        // Terms
+        public DateTime? TermsAcceptedAt { get; set; }
+    }
 }

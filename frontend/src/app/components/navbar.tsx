@@ -119,16 +119,16 @@ export default function Navbar() {
               ) : (
                 <>
                   <Link
-                    href={`/login?next=${encodeURIComponent("/services/buy")}`}
+                    href={`/auth/login?next=${encodeURIComponent("/services/buy")}`}
                     className="block px-2 py-1 text-gray-700 hover:text-blue-400 hover:scale-105 hover:shadow-lg rounded-md transition-all duration-200"
                   >
-                    Buy (login)
+                    Buy
                   </Link>
                   <Link
-                    href={`/login?next=${encodeURIComponent("/services/sell")}`}
+                    href={`/auth/login?next=${encodeURIComponent("/services/sell")}`}
                     className="block px-2 py-1 text-gray-700 hover:text-blue-400 hover:scale-105 hover:shadow-lg rounded-md transition-all duration-200"
                   >
-                    Sell (login)
+                    Sell
                   </Link>
                 </>
               )}
@@ -174,13 +174,13 @@ export default function Navbar() {
                 ) : (
                   <div className="flex items-center justify-between gap-2 px-2 py-2">
                     <Link
-                      href={`/login?next=${encodeURIComponent(nextParam)}`}
+                      href={`/auth/login?next=${encodeURIComponent(nextParam)}`}
                       className="text-blue-600 hover:underline"
                     >
                       Login
                     </Link>
                     <Link
-                      href={`/register?next=${encodeURIComponent(nextParam)}`}
+                      href={`/auth/register?next=${encodeURIComponent(nextParam)}`}
                       className="px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700"
                     >
                       Sign up
@@ -229,13 +229,13 @@ export default function Navbar() {
         ) : (
           <>
             <Link
-              href={`/login?next=${encodeURIComponent("/services/buy")}`}
+              href={`/auth/login?next=${encodeURIComponent("/services/buy")}`}
               className={linkClasses("/services/buy")}
             >
               Buy (login)
             </Link>
             <Link
-              href={`/login?next=${encodeURIComponent("/services/sell")}`}
+              href={`/auth/login?next=${encodeURIComponent("/services/sell")}`}
               className={linkClasses("/services/sell")}
             >
               Sell (login)
@@ -266,13 +266,13 @@ export default function Navbar() {
           ) : (
             <div className="flex items-center gap-3 px-2 py-1">
               <Link
-                href={`/login?next=${encodeURIComponent(nextParam)}`}
+                href={`/auth/login?next=${encodeURIComponent(nextParam)}`}
                 className="text-blue-600 hover:underline"
               >
                 Login
               </Link>
               <Link
-                href={`/register?next=${encodeURIComponent(nextParam)}`}
+                href={`/auth/register?next=${encodeURIComponent(nextParam)}`}
                 className="px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700"
               >
                 Sign up

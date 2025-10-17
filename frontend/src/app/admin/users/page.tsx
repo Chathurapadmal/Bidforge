@@ -1,185 +1,270 @@
 "use client";
-
-import { useEffect, useMemo, useState } from "react";
-import { API_BASE } from "../../../lib/config";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type AdminUser = {
   id: string;
-  userName: string;
-  email: string;
-  emailConfirmed: boolean;
+  email: string | null;
+  userName: string | null;
+  fullName: string | null;
+  phoneNumber: string | null;
   isApproved: boolean;
-  mobileNumber?: string | null;
-  nicNumber?: string | null;
-  selfiePath?: string | null; // server path e.g. /uploads/selfies/...
-  nicImagePath?: string | null; // server path e.g. /uploads/nics/...
-  termsAcceptedAt?: string | null;
+  createdAt: string; // ISO
 };
 
-function toAbs(path?: string | null) {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  if (path.startsWith("/")) return `${API_BASE}${path}`;
-  return `${API_BASE}/${path}`;
-}
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://localhost:7163";
 
 export default function AdminUsersPage() {
-  const [items, setItems] = useState<AdminUser[]>([]);
   const [status, setStatus] = useState<"pending" | "approved" | "all">(
     "pending"
   );
+  const [search, setSearch] = useState("");
+  const [items, setItems] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const fetchAbort = useRef<AbortController | null>(null);
 
-  async function load() {
+  async function fetchUsers() {
+    if (fetchAbort.current) fetchAbort.current.abort();
+    fetchAbort.current = new AbortController();
+
+    setLoading(true);
+    setErr(null);
     try {
-      setErr(null);
-      setLoading(true);
+      const params = new URLSearchParams({
+        status,
+        limit: "200",
+        ...(search.trim() ? { search: search.trim() } : {}),
+      });
+
       const res = await fetch(
-        `${API_BASE}/api/admin/users?status=${status}&limit=200`,
-        { cache: "no-store" }
+        `${API_BASE}/api/admin/users?${params.toString()}`,
+        {
+          credentials: "include",
+          signal: fetchAbort.current.signal,
+        }
       );
-      const json = await res.json();
-      if (!res.ok)
-        throw new Error(json?.message || `${res.status} ${res.statusText}`);
-      setItems(json.items ?? []);
+
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("Unauthorized. Please sign in as an Admin.");
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const ct = res.headers.get("content-type") ?? "";
+      if (!ct.includes("application/json"))
+        throw new Error(`Expected JSON, got ${ct}`);
+
+      const data: AdminUser[] = await res.json();
+      setItems(data);
     } catch (e: any) {
-      setErr(e?.message ?? "Failed to load");
+      if (e.name === "AbortError") return;
+      setErr(e.message ?? String(e));
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    load();
+    fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
   async function approve(id: string) {
-    if (!confirm("Approve this user?")) return;
+    if (approvingId) return;
+    setApprovingId(id);
     try {
       const res = await fetch(`${API_BASE}/api/admin/users/${id}/approve`, {
-        method: "POST",
+        method: "PATCH",
+        credentials: "include",
       });
-      if (!res.ok) {
-        const txt = await res.text();
-        alert(`Approve failed: ${txt}`);
-        return;
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("Unauthorized. Please sign in as an Admin.");
       }
-      await load();
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setItems((prev) =>
+        prev.map((u) => (u.id === id ? { ...u, isApproved: true } : u))
+      );
     } catch (e: any) {
-      alert(e?.message ?? "Approve failed");
+      alert(e.message ?? String(e));
+    } finally {
+      setApprovingId(null);
     }
   }
 
+  async function removeUser(id: string) {
+    if (deletingId) return;
+
+    const user = items.find((u) => u.id === id);
+    const label = user?.fullName || user?.email || "this user";
+    if (!confirm(`Delete ${label}? This cannot be undone.`)) return;
+
+    setDeletingId(id);
+    const previous = items;
+    // optimistic UI
+    setItems((prev) => prev.filter((u) => u.id !== id));
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/users/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.status === 401 || res.status === 403) {
+        setItems(previous);
+        throw new Error("Unauthorized. Please sign in as an Admin.");
+      }
+      if (!res.ok) {
+        setItems(previous);
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+    } catch (e: any) {
+      alert(e.message ?? String(e));
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return items;
+    const s = search.trim().toLowerCase();
+    return items.filter(
+      (u) =>
+        (u.email ?? "").toLowerCase().includes(s) ||
+        (u.userName ?? "").toLowerCase().includes(s) ||
+        (u.fullName ?? "").toLowerCase().includes(s) ||
+        (u.phoneNumber ?? "").toLowerCase().includes(s)
+    );
+  }, [items, search]);
+
+  const renderDate = (iso: string) => {
+    if (!iso) return "-";
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? "-" : d.toLocaleString();
+  };
+
   return (
-    <main className="min-h-screen bg-white text-gray-900">
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold">Admin · Users</h1>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as any)}
-            className="rounded border border-gray-300 p-2 text-sm"
+    <div className="min-h-screen bg-gray-50">
+      <header className="sticky top-0 z-10 bg-white border-b">
+        <div className="max-w-5xl mx-auto px-4 py-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <h1 className="text-2xl font-semibold">Admin · Users</h1>
+          <div className="flex gap-2">
+            {(["pending", "approved", "all"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setStatus(t)}
+                className={`px-3 py-1.5 rounded-full border text-sm ${
+                  status === t
+                    ? "bg-black text-white"
+                    : "bg-white hover:bg-gray-100"
+                }`}
+                aria-pressed={status === t}
+              >
+                {t[0].toUpperCase() + t.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-4 py-6">
+        <div className="flex items-center gap-2 mb-4">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by email, name, phone…"
+            className="w-full md:w-80 rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-black/50"
+          />
+          <button
+            onClick={fetchUsers}
+            className="px-3 py-2 rounded-lg bg-black text-white"
+            aria-busy={loading}
           >
-            <option value="pending">
-              Pending (email confirmed, not approved)
-            </option>
-            <option value="approved">Approved</option>
-            <option value="all">All</option>
-          </select>
+            Refresh
+          </button>
         </div>
 
-        {err && (
-          <div className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">
-            {err}
-          </div>
-        )}
+        {loading && <div className="text-gray-600">Loading users…</div>}
+        {err && <div className="text-red-600">Error: {err}</div>}
 
-        {loading ? (
-          <p className="text-gray-500">Loading…</p>
-        ) : items.length === 0 ? (
-          <div className="text-center text-gray-500 py-10 border border-gray-200 rounded-xl bg-white">
-            No users in this filter.
-          </div>
-        ) : (
-          <div className="overflow-auto border border-gray-200 rounded-xl bg-white">
+        {!loading && !err && (
+          <div className="overflow-x-auto rounded-xl border bg-white">
             <table className="min-w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr className="border-b">
-                  <th className="p-2 text-left">User</th>
-                  <th className="p-2 text-left">Contact</th>
-                  <th className="p-2 text-left">Documents</th>
-                  <th className="p-2 text-left">Status</th>
-                  <th className="p-2 text-left">Actions</th>
+              <thead className="bg-gray-50 text-gray-600">
+                <tr>
+                  <th className="text-left px-4 py-3">User</th>
+                  <th className="text-left px-4 py-3">Username</th>
+                  <th className="text-left px-4 py-3">Phone</th>
+                  <th className="text-left px-4 py-3">Created</th>
+                  <th className="text-left px-4 py-3">Status</th>
+                  <th className="text-right px-4 py-3">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {items.map((u) => (
-                  <tr key={u.id} className="border-t align-top">
-                    <td className="p-2">
-                      <div className="font-semibold">{u.userName}</div>
-                      <div className="text-xs text-gray-600">
-                        NIC: {u.nicNumber ?? "—"}
+                {filtered.map((u) => (
+                  <tr key={u.id} className="border-t">
+                    <td className="px-4 py-3">
+                      <div className="font-medium">
+                        {u.fullName ?? u.email ?? "(no email)"}
                       </div>
+                      <div className="text-gray-500">{u.email}</div>
                     </td>
-                    <td className="p-2">
-                      <div>{u.email}</div>
-                      <div className="text-xs text-gray-600">
-                        {u.mobileNumber ?? "—"}
-                      </div>
-                    </td>
-                    <td className="p-2">
-                      <div className="flex gap-2">
-                        {u.selfiePath && (
-                          <a href={toAbs(u.selfiePath)} target="_blank">
-                            <img
-                              src={toAbs(u.selfiePath)}
-                              className="h-16 w-16 object-cover border rounded"
-                              alt="selfie"
-                            />
-                          </a>
-                        )}
-                        {u.nicImagePath && (
-                          <a href={toAbs(u.nicImagePath)} target="_blank">
-                            <img
-                              src={toAbs(u.nicImagePath)}
-                              className="h-16 w-16 object-cover border rounded"
-                              alt="NIC"
-                            />
-                          </a>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-2">
-                      <div className="text-xs">
-                        Email:{" "}
-                        {u.emailConfirmed ? "Verified ✅" : "Unverified ❌"}
-                      </div>
-                      <div className="text-xs">
-                        Approval: {u.isApproved ? "Approved ✅" : "Pending ⏳"}
-                      </div>
-                    </td>
-                    <td className="p-2">
-                      {!u.isApproved ? (
-                        <button
-                          className="px-3 py-1 rounded bg-green-600 text-white hover:opacity-90"
-                          onClick={() => approve(u.id)}
-                        >
-                          Approve
-                        </button>
+                    <td className="px-4 py-3">{u.userName ?? "-"}</td>
+                    <td className="px-4 py-3">{u.phoneNumber ?? "-"}</td>
+                    <td className="px-4 py-3">{renderDate(u.createdAt)}</td>
+                    <td className="px-4 py-3">
+                      {u.isApproved ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-800">
+                          Approved
+                        </span>
                       ) : (
-                        <span className="text-gray-500 text-xs">
-                          No actions
+                        <span className="inline-flex items-center px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                          Pending
                         </span>
                       )}
                     </td>
+                    <td className="px-4 py-3 text-right space-x-2">
+                      {!u.isApproved ? (
+                        <button
+                          onClick={() => approve(u.id)}
+                          disabled={approvingId === u.id}
+                          className="px-3 py-1.5 rounded-md bg-black text-white hover:opacity-90 disabled:opacity-60"
+                          aria-busy={approvingId === u.id}
+                          title="Approve user"
+                        >
+                          {approvingId === u.id ? "Approving…" : "Approve"}
+                        </button>
+                      ) : (
+                        <span className="text-gray-400 align-middle">—</span>
+                      )}
+
+                      <button
+                        onClick={() => removeUser(u.id)}
+                        disabled={deletingId === u.id}
+                        className="px-3 py-1.5 rounded-md border text-red-600 hover:bg-red-50 disabled:opacity-60"
+                        aria-busy={deletingId === u.id}
+                        title="Delete user"
+                      >
+                        {deletingId === u.id ? "Deleting…" : "Delete"}
+                      </button>
+                    </td>
                   </tr>
                 ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-4 py-8 text-center text-gray-500"
+                    >
+                      No users found.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         )}
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

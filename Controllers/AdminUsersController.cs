@@ -1,7 +1,8 @@
-﻿// Controllers/AdminUsersController.cs
+﻿using System.Security.Claims;
+using Bidforge.Data;
 using Bidforge.Models;
-using Bidforge.DTOs;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,78 +10,113 @@ namespace Bidforge.Controllers;
 
 [ApiController]
 [Route("api/admin/users")]
-public class AdminUsersController(UserManager<ApplicationUser> userManager) : ControllerBase
+[Produces("application/json")]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
+public class AdminUsersController : ControllerBase
 {
-    // GET /api/admin/users?status=pending|approved|all (default: pending)
-    [HttpGet]
-    public async Task<IActionResult> List([FromQuery] string status = "pending", [FromQuery] int limit = 100)
-    {
-        var q = userManager.Users.AsNoTracking();
+    private readonly AppDbContext _db;
 
-        switch ((status ?? "pending").ToLowerInvariant())
+    public AdminUsersController(AppDbContext db) => _db = db;
+
+    [HttpGet]
+    public async Task<IActionResult> GetUsers([FromQuery] string status = "pending",
+                                              [FromQuery] int limit = 200,
+                                              [FromQuery] string? search = null)
+    {
+        var q = _db.Users.AsNoTracking().AsQueryable();
+
+        switch ((status ?? "pending").Trim().ToLowerInvariant())
         {
-            case "approved":
-                q = q.Where(u => u.EmailConfirmed && u.IsApproved);
-                break;
-            case "all":
-                // no filter
-                break;
-            default: // pending
-                q = q.Where(u => u.EmailConfirmed && !u.IsApproved);
-                break;
+            case "pending": q = q.Where(u => !u.IsApproved); break;
+            case "approved": q = q.Where(u => u.IsApproved); break;
+            case "all": default: break;
         }
 
-        limit = Math.Clamp(limit, 1, 500);
-        var items = await q
-            .OrderBy(u => u.UserName)
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim().ToLower();
+            q = q.Where(u =>
+                (u.Email != null && u.Email.ToLower().Contains(s)) ||
+                (u.UserName != null && u.UserName.ToLower().Contains(s)) ||
+                (u.FullName != null && u.FullName.ToLower().Contains(s)) ||
+                (u.PhoneNumber != null && u.PhoneNumber.ToLower().Contains(s)) ||
+                (u.MobileNumber != null && u.MobileNumber.ToLower().Contains(s)) ||
+                (u.NicNumber != null && u.NicNumber.ToLower().Contains(s))
+            );
+        }
+
+        limit = Math.Clamp(limit, 1, 1000);
+
+        var list = await q
+            .OrderBy(u => u.IsApproved)
+            .ThenByDescending(u => u.CreatedAt)
             .Take(limit)
-            .Select(u => new {
+            .Select(u => new
+            {
                 id = u.Id,
-                userName = u.UserName,
                 email = u.Email,
-                emailConfirmed = u.EmailConfirmed,
+                userName = u.UserName,
+                fullName = u.FullName,
+                phoneNumber = u.PhoneNumber ?? u.MobileNumber,
                 isApproved = u.IsApproved,
-                mobileNumber = u.MobileNumber,
-                nicNumber = u.NicNumber,
-                selfiePath = u.SelfiePath,
-                nicImagePath = u.NicImagePath,
-                termsAcceptedAt = u.TermsAcceptedAt
+                createdAt = u.CreatedAt
             })
             .ToListAsync();
 
-        return Ok(new { items, total = items.Count });
+        return Ok(list);
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> Get([FromRoute] string id)
+    public async Task<IActionResult> GetUserById([FromRoute] string id)
     {
-        var u = await userManager.FindByIdAsync(id);
-        if (u == null) return NotFound();
-        return Ok(new
-        {
-            id = u.Id,
-            userName = u.UserName,
-            email = u.Email,
-            emailConfirmed = u.EmailConfirmed,
-            isApproved = u.IsApproved,
-            mobileNumber = u.MobileNumber,
-            nicNumber = u.NicNumber,
-            selfiePath = u.SelfiePath,
-            nicImagePath = u.NicImagePath,
-            termsAcceptedAt = u.TermsAcceptedAt
-        });
+        var user = await _db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == id)
+            .Select(u => new
+            {
+                id = u.Id,
+                email = u.Email,
+                userName = u.UserName,
+                fullName = u.FullName,
+                phoneNumber = u.PhoneNumber ?? u.MobileNumber,
+                isApproved = u.IsApproved,
+                createdAt = u.CreatedAt
+            })
+            .FirstOrDefaultAsync();
+
+        if (user == null) return NotFound(new { message = "User not found" });
+        return Ok(user);
     }
 
-    // POST /api/admin/users/{id}/approve
-    [HttpPost("{id}/approve")]
-    public async Task<IActionResult> Approve([FromRoute] string id)
+    [HttpPatch("{id}/approve")]
+    public async Task<IActionResult> ApproveUser([FromRoute] string id)
     {
-        var u = await userManager.FindByIdAsync(id);
-        if (u == null) return NotFound();
-        if (u.IsApproved) return Ok(new { message = "Already approved." });
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == id);
+        if (user == null) return NotFound(new { message = "User not found" });
 
-        u.IsApproved = true;
-        await userManager.UpdateAsync(u);
-        return Ok(new { message = "User approved." });
+        if (!user.IsApproved)
+        {
+            user.IsApproved = true;
+            await _db.SaveChangesAsync();
+        }
+
+        return Ok(new { ok = true });
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteUser([FromRoute] string id)
+    {
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrEmpty(currentUserId) && currentUserId == id)
+            return BadRequest(new { message = "You cannot delete your own account." });
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == id);
+        if (user == null)
+            return NotFound(new { message = $"User not found: {id}" });
+
+        _db.Users.Remove(user);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
     }
 }

@@ -2,99 +2,75 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { API_BASE } from "../../../lib/config";
-import { readJsonSafe } from "../../../lib/http";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { API_BASE } from "../../../lib/config";
+
+type VerifyResp = { message?: string };
 
 export default function VerifyEmailPage() {
   const sp = useSearchParams();
-  const router = useRouter();
-  const userId = sp.get("userId") || "";
-  const token = sp.get("token") || "";
+  const userId = sp.get("userId");
+  const token = sp.get("token");
 
-  const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
-  const [message, setMessage] = useState<string>("Verifying email...");
-  const [countdown, setCountdown] = useState<number>(5); // optional auto-redirect after success
+  const [msg, setMsg] = useState<string>("Verifying…");
+  const [ok, setOk] = useState<boolean | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function run() {
+    (async () => {
       if (!userId || !token) {
-        setStatus("error");
-        setMessage("Invalid verification link.");
+        setOk(false);
+        setMsg("Missing userId or token.");
         return;
       }
-
       try {
-        const url = `${API_BASE}/api/auth/confirm-email?userId=${encodeURIComponent(
+        const url = `${API_BASE}/api/auth/verify?userId=${encodeURIComponent(
           userId
         )}&token=${encodeURIComponent(token)}`;
 
-        const res = await fetch(url, { method: "GET" });
-        const json = await readJsonSafe(res);
-
-        if (cancelled) return;
+        const res = await fetch(url, { credentials: "include" });
+        const ct = res.headers.get("content-type") ?? "";
+        const isJson = ct.includes("application/json");
 
         if (!res.ok) {
-          setStatus("error");
-          setMessage(
-            json?.message ||
-              (res.status === 400
-                ? "Invalid or expired verification token."
-                : `Verification failed: ${res.status} ${res.statusText}`)
-          );
-        } else {
-          setStatus("ok");
-          setMessage(
-            "Email verified successfully. Please wait for admin approval, then log in."
-          );
+          // Try to read server message if present
+          let serverMsg = "Verification failed.";
+          if (isJson) {
+            const j = (await res.json()) as VerifyResp;
+            if (j?.message) serverMsg = j.message;
+          } else {
+            const t = await res.text();
+            if (t) serverMsg = t.slice(0, 300);
+          }
+          setOk(false);
+          setMsg(serverMsg);
+          return;
         }
-      } catch (e: any) {
-        if (cancelled) return;
-        setStatus("error");
-        setMessage(e?.message ?? "Verification failed.");
-      }
-    }
 
-    run();
-    return () => {
-      cancelled = true;
-    };
+        // 2xx → success
+        let serverMsg = "Email verified!";
+        if (isJson) {
+          const j = (await res.json()) as VerifyResp;
+          if (j?.message) serverMsg = j.message;
+        }
+        setOk(true);
+        setMsg(serverMsg);
+      } catch (e: any) {
+        setOk(false);
+        setMsg(e?.message ?? "Verification failed.");
+        console.error(e);
+      }
+    })();
   }, [userId, token]);
 
-  // Optional: auto-redirect to login after success
-  useEffect(() => {
-    if (status !== "ok") return;
-    const t = setInterval(() => setCountdown((n) => n - 1), 1000);
-    const r = setTimeout(() => router.push("/auth/login"), 5000);
-    return () => {
-      clearInterval(t);
-      clearTimeout(r);
-    };
-  }, [status, router]);
-
   return (
-    <main className="min-h-screen grid place-items-center bg-white text-gray-900">
-      <div className="text-center max-w-md px-6">
-        <h1 className="text-2xl font-bold mb-3">Email Verification</h1>
-        <p className={status === "error" ? "text-red-600" : "text-gray-700"}>
-          {message}
-        </p>
-
-        {status === "ok" ? (
-          <p className="mt-2 text-sm text-gray-500">
-            Redirecting to login in {countdown}s...
-          </p>
-        ) : null}
-
-        <div className="mt-4">
-          <Link href="/auth/login" className="text-blue-600 underline">
-            Go to Login
-          </Link>
-        </div>
+    <div className="max-w-md mx-auto p-6">
+      <h1 className="text-xl font-semibold mb-3">Email Verification</h1>
+      <p className={ok ? "text-green-700" : "text-red-700"}>{msg}</p>
+      <div className="mt-4 flex gap-3">
+        <Link className="underline" href="/auth/login">Go to Login</Link>
+        <Link className="underline" href="/auth/resend">Resend Email</Link>
       </div>
-    </main>
+    </div>
   );
 }
