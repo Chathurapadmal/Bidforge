@@ -1,4 +1,8 @@
-﻿// Controllers/AuctionsController.cs
+﻿using Microsoft.AspNetCore.Mvc;          // ControllerBase, ApiController, Route, IActionResult, HttpGet, FromQuery
+using Microsoft.EntityFrameworkCore;      // if you use EF queries
+using Bidforge.Data;                      // AppDbContext
+using Bidforge.Models;                    // Auction, etc.
+// Controllers/AuctionsController.cs
 using Microsoft.AspNetCore.Authorization;
 // ...other usings already present...
 

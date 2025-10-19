@@ -13,6 +13,9 @@ namespace Bidforge.Models
         public string MobileNumber { get; set; } = "";
         public string NicNumber { get; set; } = "";
 
+        // Profile picture
+        public string? ProfilePicture { get; set; }   // 👈 added this property
+
         // KYC upload paths
         public string? SelfiePath { get; set; }
         public string? NicImagePath { get; set; }
