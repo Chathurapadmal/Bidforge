@@ -1,8 +1,7 @@
 ﻿import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Navbar from "./components/navbar";
-import LayoutClient from "./LayoutClient"; 
+import LayoutClient from "./LayoutClient";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -17,15 +16,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=account_circle"
         />
       </head>
-      <body className={`${inter.variable} antialiased`}>
-        <Navbar />
+      <body className={`${inter.variable} antialiased`} suppressHydrationWarning>
+        {/* Navbar + Footer handled in LayoutClient */}
         <LayoutClient>{children}</LayoutClient>
       </body>
     </html>

@@ -169,7 +169,7 @@ export default function Page() {
         {/* Top Photo Slider */}
         <div className="mt-2">
           <PhotoSlider
-            images={["slide1.jpg", "slide2.jpg", "slide3.jpg", "slide4.webp"]}
+            images={["slide1.jpg", "slide2.jpg", "slide3.jpg", ]}
           />
         </div>
 

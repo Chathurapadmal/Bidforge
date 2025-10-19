@@ -7,9 +7,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export default function Navbar() {
   // ---- state
-  const [isOpen, setIsOpen] = useState(false); // mobile menu
-  const [menuOpen, setMenuOpen] = useState(false); // profile dropdown
-  const [user, setUser] = useState(null); // session user (if any)
+  const [isOpen, setIsOpen] = useState(false); 
+  const [menuOpen, setMenuOpen] = useState(false); 
+  const [user, setUser] = useState(null); 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
 
@@ -77,7 +77,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white border-b border-gray-200 shadow-md relative z-50 pt-1">
+    <nav className="bg-white border-b border-gray-200 shadow-md relative z-50 ">
       <div className="mx-auto px-3 py-1 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center">
@@ -145,7 +145,7 @@ export default function Navbar() {
           {/* Profile / Auth */}
           <div className="relative" ref={menuRef}>
             <button
-              className="flex items-center gap-1 rounded-md px-2 py-1 hover:bg-gray-100"
+              className="flex items-center gap-1 text-gray-500 rounded-md px-2 py-1 hover:text-gray-100 hover:bg-gray-500"
               onClick={() => setMenuOpen((v) => !v)}
               aria-label="Open profile menu"
             >
