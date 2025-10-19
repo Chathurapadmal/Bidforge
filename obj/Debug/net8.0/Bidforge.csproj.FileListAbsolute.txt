@@ -139,7 +139,6 @@ E:\repo\Bidforge\obj\Debug\net8.0\Bidforge.AssemblyInfo.cs
 E:\repo\Bidforge\obj\Debug\net8.0\Bidforge.csproj.CoreCompileInputs.cache
 E:\repo\Bidforge\obj\Debug\net8.0\Bidforge.MvcApplicationPartsAssemblyInfo.cs
 E:\repo\Bidforge\obj\Debug\net8.0\Bidforge.MvcApplicationPartsAssemblyInfo.cache
-E:\repo\Bidforge\obj\Debug\net8.0\Bidforge.sourcelink.json
 E:\repo\Bidforge\obj\Debug\net8.0\rjimswa.dswa.cache.json
 E:\repo\Bidforge\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
 E:\repo\Bidforge\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json
