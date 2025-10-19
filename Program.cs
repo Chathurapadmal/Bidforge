@@ -1,7 +1,8 @@
 ﻿using System.Text;
 using Bidforge.Data;
 using Bidforge.Models;
-using Bidforge.Services;
+using Bidforge.Services;   // MkEmailSender lives here
+using Bidforge.Options;    // JwtOptions lives here
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -9,13 +10,13 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ---------- EF + Identity ----------
+// ---------- EF Core + Identity ----------
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(opts =>
 {
-    // dev-friendly password rules; tighten for prod
+    // dev-friendly; harden for prod
     opts.Password.RequireDigit = false;
     opts.Password.RequireUppercase = false;
     opts.Password.RequireNonAlphanumeric = false;
@@ -26,12 +27,15 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(opts =>
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
-// Email token lifespan (optional)
+// Optional: email token lifespan
 builder.Services.Configure<DataProtectionTokenProviderOptions>(o =>
     o.TokenLifespan = TimeSpan.FromDays(2));
 
-// ---------- JWT ----------
+// ---------- Options binding ----------
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
+builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Smtp"));
+
+// ---------- JWT Auth ----------
 var jwtKey = builder.Configuration["Jwt:Key"]
              ?? throw new InvalidOperationException("Jwt:Key missing");
 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
@@ -56,7 +60,7 @@ builder.Services
             ClockSkew = TimeSpan.Zero
         };
 
-        // Read JWT from HttpOnly cookie "access_token"
+        // Allow JWT from HttpOnly cookie "access_token"
         opts.Events = new JwtBearerEvents
         {
             OnMessageReceived = ctx =>
@@ -64,12 +68,10 @@ builder.Services
                 if (string.IsNullOrEmpty(ctx.Token))
                 {
                     var cookie = ctx.Request.Cookies["access_token"];
-                    if (!string.IsNullOrEmpty(cookie))
-                        ctx.Token = cookie;
+                    if (!string.IsNullOrEmpty(cookie)) ctx.Token = cookie;
                 }
                 return Task.CompletedTask;
             },
-            // Return JSON instead of empty body on 401/403
             OnChallenge = async ctx =>
             {
                 ctx.HandleResponse();
@@ -90,9 +92,9 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
-// ---------- Email sending ----------
-builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Smtp"));
-builder.Services.AddScoped<IEmailSender, MailKitEmailSender>();
+// ---------- DI: App services ----------
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+builder.Services.AddScoped<MkEMailSender>(); // <-- use your concrete mail sender used by AuthController
 
 // ---------- MVC / Controllers ----------
 builder.Services.AddControllers();
@@ -118,6 +120,7 @@ if (builder.Environment.IsDevelopment())
 
 var app = builder.Build();
 
+// ---------- Pipeline ----------
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -125,7 +128,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+app.UseStaticFiles();      // serve wwwroot (e.g., /images/kyc/..)
 app.UseRouting();
 app.UseCors("frontend");
 app.UseAuthentication();

@@ -4641,6 +4641,8 @@
       "Microsoft.AspNetCore.Authentication.JwtBearer >= 8.0.6",
       "Microsoft.AspNetCore.Identity.EntityFrameworkCore >= 8.0.6",
       "Microsoft.EntityFrameworkCore >= 8.0.6",
+      "Microsoft.EntityFrameworkCore.Design >= 8.0.6",
+      "Microsoft.EntityFrameworkCore.Relational >= 8.0.6",
       "Microsoft.EntityFrameworkCore.SqlServer >= 8.0.6",
       "Microsoft.EntityFrameworkCore.Tools >= 8.0.6",
       "Microsoft.IdentityModel.Tokens >= 8.0.2",
@@ -4649,7 +4651,7 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Chathura\\.nuget\\packages\\": {},
+    "C:\\Users\\Chathura\\.nuget\\packages": {},
     "D:\\Softwares\\VS sdk\\NuGetPackages": {}
   },
   "project": {
@@ -4658,7 +4660,7 @@
       "projectUniqueName": "E:\\repo\\Bidforge\\Bidforge.csproj",
       "projectName": "Bidforge",
       "projectPath": "E:\\repo\\Bidforge\\Bidforge.csproj",
-      "packagesPath": "C:\\Users\\Chathura\\.nuget\\packages\\",
+      "packagesPath": "C:\\Users\\Chathura\\.nuget\\packages",
       "outputPath": "E:\\repo\\Bidforge\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
@@ -4711,6 +4713,16 @@
             "version": "[8.0.6, )"
           },
           "Microsoft.EntityFrameworkCore": {
+            "target": "Package",
+            "version": "[8.0.6, )"
+          },
+          "Microsoft.EntityFrameworkCore.Design": {
+            "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+            "suppressParent": "All",
+            "target": "Package",
+            "version": "[8.0.6, )"
+          },
+          "Microsoft.EntityFrameworkCore.Relational": {
             "target": "Package",
             "version": "[8.0.6, )"
           },

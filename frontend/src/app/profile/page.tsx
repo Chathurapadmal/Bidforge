@@ -9,10 +9,17 @@ type Me = {
   userName: string;
   email: string;
   fullName?: string | null;
-  profilePicture?: string | null; // e.g. "/profile-pictures/abc.jpg" or absolute URL
+  profilePicture?: string | null; // "/profile-pictures/abc.jpg" or absolute URL
 };
 
 const PLACEHOLDER = "/placeholder.png";
+
+function resolveImg(url?: string | null) {
+  if (!url || !url.trim()) return PLACEHOLDER;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  // server returned a relative path — prefix with API_BASE
+  return `${API_BASE}${url}`;
+}
 
 export default function ProfilePage() {
   const [me, setMe] = useState<Me | null>(null);
@@ -23,25 +30,34 @@ export default function ProfilePage() {
 
   const router = useRouter();
 
+  async function fetchMe() {
+    setErr(null);
+    const res = await fetch(`${API_BASE}/api/profile`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (res.status === 401) {
+      router.replace(`/auth/login?next=/profile`);
+      return null;
+    }
+    if (!res.ok) {
+      setErr(`Failed to load profile: ${res.status} ${res.statusText}`);
+      return null;
+    }
+    const j = (await res.json()) as Me;
+    setMe(j);
+    return j;
+  }
+
   useEffect(() => {
     let active = true;
     (async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/auth/me`, {
-          credentials: "include",
-        });
-        if (res.status === 401) {
-          router.replace(`/auth/login?next=/profile`);
-          return;
-        }
-        if (!res.ok) {
-          setErr(`Failed to load profile: ${res.status} ${res.statusText}`);
-          return;
-        }
-        const j = (await res.json()) as Me;
-        if (active) setMe(j);
+        const data = await fetchMe();
+        if (!active) return;
+        if (data) setMe(data);
       } catch (e: any) {
-        setErr(e?.message || "Failed to load profile");
+        if (active) setErr(e?.message || "Failed to load profile");
       } finally {
         if (active) setLoading(false);
       }
@@ -63,6 +79,7 @@ export default function ProfilePage() {
 
   async function onUpload() {
     if (!file) return;
+    setErr(null);
     try {
       const fd = new FormData();
       fd.append("file", file);
@@ -71,15 +88,15 @@ export default function ProfilePage() {
         credentials: "include",
         body: fd,
       });
+      if (res.status === 401) {
+        router.replace(`/auth/login?next=/profile`);
+        return;
+      }
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         throw new Error(text || `Upload failed: ${res.status}`);
       }
-      // Re-fetch /me to get the new photo URL
-      const meRes = await fetch(`${API_BASE}/api/auth/me`, {
-        credentials: "include",
-      });
-      if (meRes.ok) setMe(await meRes.json());
+      await fetchMe(); // refresh profile data
       setFile(null);
       setPreview(null);
     } catch (e: any) {
@@ -91,11 +108,7 @@ export default function ProfilePage() {
   if (err) return <div className="p-6 text-red-600">{err}</div>;
   if (!me) return null;
 
-  const imgSrc =
-    preview ??
-    (me.profilePicture && me.profilePicture.trim()
-      ? me.profilePicture
-      : PLACEHOLDER);
+  const imgSrc = preview ?? resolveImg(me.profilePicture);
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -104,6 +117,7 @@ export default function ProfilePage() {
 
         <div className="bg-white rounded-xl border p-6 space-y-4">
           <div className="flex items-center gap-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imgSrc}
               alt="Profile"

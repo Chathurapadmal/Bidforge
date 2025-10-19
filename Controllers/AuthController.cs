@@ -1,299 +1,224 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
+﻿// Controllers/AuthController.cs
+using System.Security.Cryptography;
 using System.Text;
-using Bidforge.DTOs;
+using Bidforge.Contracts;
+using Bidforge.Data;
 using Bidforge.Models;
-using Bidforge.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
+using Bidforge.Services; // MkMailSender
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.AspNetCore.WebUtilities; // WebEncoders
 
 namespace Bidforge.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Produces("application/json")]
 public class AuthController(
     UserManager<ApplicationUser> userManager,
-    IOptions<JwtOptions> jwtOptions,
+    IJwtTokenService jwt,
+    MkEMailSender emailSender,
     IWebHostEnvironment env,
-    IEmailSender emailSender,
-    IConfiguration config) : ControllerBase
+    AppDbContext db
+) : ControllerBase
 {
-    private readonly JwtOptions _jwt = jwtOptions.Value;
-
-    public record RegisterDto(
-        string UserName,
-        string Email,
-        string Password,
-        string MobileNumber,
-        string NicNumber,
-        bool AgreeTerms);
-
-    // --- POST /api/auth/register  (multipart: selfie, nicImage) ---
+    // POST /api/auth/register (multipart/form-data)
     [HttpPost("register")]
-    [AllowAnonymous]
-    [RequestSizeLimit(25_000_000)]
-    [Consumes("multipart/form-data")]
-    public async Task<IActionResult> Register([FromForm] RegisterDto dto)
+    [RequestSizeLimit(20_000_000)]
+    public async Task<IActionResult> Register([FromForm] RegisterRequest req)
     {
-        if (!dto.AgreeTerms)
-            return BadRequest(new { message = "You must agree to Terms & Conditions." });
+        if (!ModelState.IsValid) return ValidationProblem(ModelState);
 
-        var exists = await userManager.Users.AnyAsync(u =>
-            u.Email == dto.Email || u.UserName == dto.UserName);
-        if (exists)
-            return BadRequest(new { message = "Username or Email already exists." });
+        if (await userManager.FindByEmailAsync(req.Email) is not null)
+            return Conflict(new { message = "Email already in use." });
+
+        if (await userManager.Users.AnyAsync(u => u.UserName == req.UserName))
+            return Conflict(new { message = "Username already in use." });
 
         var user = new ApplicationUser
         {
-            UserName = dto.UserName.Trim(),
-            Email = dto.Email.Trim(),
-            MobileNumber = dto.MobileNumber.Trim(),
-            NicNumber = dto.NicNumber.Trim(),
-            EmailConfirmed = false,
-            IsApproved = false,
-            TermsAcceptedAt = DateTime.UtcNow
+            FullName = req.FullName,
+            UserName = req.UserName,
+            Email = req.Email,
+            PhoneNumber = req.PhoneNumber,
+            NicNumber = req.NicNumber ?? "",
+            IsApproved = false
         };
 
-        var selfieFile = Request.Form.Files.GetFile("selfie");
-        var nicFile = Request.Form.Files.GetFile("nicImage");
-        if (selfieFile is null || selfiesize(selfieFile) == 0)
-            return BadRequest(new { message = "Selfie is required." });
-        if (nicFile is null || selfiesize(nicFile) == 0)
-            return BadRequest(new { message = "NIC image is required." });
+        var create = await userManager.CreateAsync(user, req.Password);
+        if (!create.Succeeded) return BadRequest(new { errors = create.Errors });
 
-        var selfiePath = await SaveUpload(selfieFile, "selfies");
-        var nicPath = await SaveUpload(nicFile, "nics");
-        user.SelfiePath = selfiePath;
-        user.NicImagePath = nicPath;
+        // Save KYC photos
+        var wwwroot = env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot");
+        var root = Path.Combine(wwwroot, "images", "kyc", user.Id);
+        Directory.CreateDirectory(root);
 
-        var result = await userManager.CreateAsync(user, dto.Password);
-        if (!result.Succeeded)
-            return BadRequest(new { message = string.Join("; ", result.Errors.Select(e => e.Description)) });
+        if (req.NicPic is not null && req.NicPic.Length > 0)
+        {
+            var path = Path.Combine(root, "nic" + Path.GetExtension(req.NicPic.FileName));
+            using var fs = System.IO.File.Create(path);
+            await req.NicPic.CopyToAsync(fs);
+            user.NicImagePath = ToWebPath(wwwroot, path);
+        }
+        if (req.SelfyPic is not null && req.SelfyPic.Length > 0)
+        {
+            var path = Path.Combine(root, "selfie" + Path.GetExtension(req.SelfyPic.FileName));
+            using var fs = System.IO.File.Create(path);
+            await req.SelfyPic.CopyToAsync(fs);
+            user.SelfiePath = ToWebPath(wwwroot, path);
+        }
+        await userManager.UpdateAsync(user);
 
+        // Email confirmation
         var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
-        var urlToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+        var encoded = Uri.EscapeDataString(token);
+        var confirmUrl = $"{Request.Scheme}://{Request.Host}/api/auth/confirm-email?userId={user.Id}&token={encoded}";
 
-        var frontBase = config["Frontend:BaseUrl"];
-        var confirmUrl = !string.IsNullOrWhiteSpace(frontBase)
-            ? $"{frontBase!.TrimEnd('/')}/auth/verify?userId={Uri.EscapeDataString(user.Id)}&token={Uri.EscapeDataString(urlToken)}"
-            : $"{Request.Scheme}://{Request.Host}/api/auth/verify?userId={Uri.EscapeDataString(user.Id)}&token={Uri.EscapeDataString(urlToken)}";
+        await emailSender.SendAsync(user.Email!, "Confirm your email",
+            $"<p>Hi {user.FullName},</p><p>Please confirm your email: <a href=\"{confirmUrl}\">Confirm</a></p>");
 
-        await emailSender.SendEmailAsync(
-            user.Email!,
-            "Verify your Bidforge email",
-            $@"<p>Welcome to Bidforge, {System.Net.WebUtility.HtmlEncode(user.UserName)}!</p>
-               <p>Please verify your email by clicking:</p>
-               <p><a href=""{confirmUrl}"">Confirm Email</a></p>");
-
-        return Ok(new { message = "Registered. Check your email to verify. Waiting for admin approval after verification." });
+        return Ok(new { message = "Registered. Please check your email to confirm." });
     }
 
+    // GET /api/auth/confirm-email?userId=&token=
     [HttpGet("confirm-email")]
-    [AllowAnonymous]
-    public Task<IActionResult> ConfirmEmail([FromQuery] string userId, [FromQuery] string token)
-        => Verify(userId, token, html: false);
-
-    [HttpGet("verify")]
-    [AllowAnonymous]
-    public async Task<IActionResult> Verify([FromQuery] string userId, [FromQuery] string token, [FromQuery] bool html = false)
+    public async Task<IActionResult> ConfirmEmail([FromQuery] string userId, [FromQuery] string token)
     {
-        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token))
-            return BadRequest(new { message = "Missing userId or token." });
-
         var user = await userManager.FindByIdAsync(userId);
-        if (user == null) return NotFound(new { message = "User not found." });
+        if (user is null) return NotFound(new { message = "User not found." });
 
-        string decodedToken;
-        try { decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(token)); }
-        catch { return BadRequest(new { message = "Invalid token format." }); }
+        var res = await userManager.ConfirmEmailAsync(user, token);
+        if (!res.Succeeded) return BadRequest(new { errors = res.Errors });
 
-        var res = await userManager.ConfirmEmailAsync(user, decodedToken);
-        if (!res.Succeeded)
-            return BadRequest(new { message = "Email confirmation failed.", details = res.Errors.Select(e => e.Description) });
-
-        if (!html) return Ok(new { message = "Email verified successfully." });
-
-        var loginUrl = config["Frontend:LoginUrl"] ?? (config["Frontend:BaseUrl"] is string fb && !string.IsNullOrWhiteSpace(fb)
-            ? $"{fb.TrimEnd('/')}/auth/login" : "/auth/login");
-
-        var htmlBody =
-$@"<!doctype html>
-<html><head><meta charset=""utf-8""><title>Bidforge – Email Verified</title>
-<meta name=""viewport"" content=""width=device-width, initial-scale=1"">
-<style>
-body{{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f7f9;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center}}
-.card{{background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.08);padding:28px;max-width:520px}}
-h1{{margin:0 0 8px;font-size:22px}}
-p{{margin:0 0 14px;color:#374151}}
-a.btn{{display:inline-block;margin-top:8px;background:#111;color:#fff;text-decoration:none;padding:10px 14px;border-radius:10px}}
-</style>
-</head><body>
-<div class=""card"">
-  <h1>✅ Email verified</h1>
-  <p>Your email has been confirmed. You can log in now.</p>
-  <a class=""btn"" href=""{loginUrl}"">Go to Login</a>
-</div>
-</body></html>";
-        return Content(htmlBody, "text/html");
+        return Content("Email confirmed. You can close this window and login.");
     }
 
-    [HttpPost("resend")]
-    [AllowAnonymous]
-    public async Task<IActionResult> Resend([FromQuery] string email)
-    {
-        var user = await userManager.FindByEmailAsync(email);
-        if (user == null) return NotFound(new { message = "User not found." });
-        if (await userManager.IsEmailConfirmedAsync(user))
-            return Ok(new { message = "Already verified." });
-
-        var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
-        var urlToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
-
-        var frontBase = config["Frontend:BaseUrl"];
-        var confirmUrl = !string.IsNullOrWhiteSpace(frontBase)
-            ? $"{frontBase!.TrimEnd('/')}/auth/verify?userId={Uri.EscapeDataString(user.Id)}&token={Uri.EscapeDataString(urlToken)}"
-            : $"{Request.Scheme}://{Request.Host}/api/auth/verify?userId={Uri.EscapeDataString(user.Id)}&token={Uri.EscapeDataString(urlToken)}";
-
-        await emailSender.SendEmailAsync(user.Email!, "Verify your Bidforge email",
-            $@"<p>Click to verify your email:</p><p><a href=""{confirmUrl}"">Confirm Email</a></p>");
-
-        return Ok(new { message = "Verification email resent." });
-    }
-
-    // --- POST /api/auth/login ---
+    // POST /api/auth/login
     [HttpPost("login")]
-    [AllowAnonymous]
-    public async Task<IActionResult> Login([FromBody] LoginDto dto)
+    public async Task<IActionResult> Login([FromBody] LoginRequest req)
     {
-        var input = dto.UserNameOrEmail?.Trim() ?? string.Empty;
+        var user = await userManager.Users
+            .FirstOrDefaultAsync(u => u.Email == req.EmailOrUserName || u.UserName == req.EmailOrUserName);
 
-        ApplicationUser? user =
-            await userManager.FindByNameAsync(input) ??
-            await userManager.FindByEmailAsync(input);
+        if (user is null) return Unauthorized(new { message = "Invalid credentials." });
+        if (!user.EmailConfirmed) return Unauthorized(new { message = "Please confirm your email first." });
 
-        if (user == null)
-            return Unauthorized(new { message = "Invalid credentials." });
+        var passOk = await userManager.CheckPasswordAsync(user, req.Password);
+        if (!passOk) return Unauthorized(new { message = "Invalid credentials." });
 
-        if (!user.EmailConfirmed)
-            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Please verify your email first." });
+        var roles = await userManager.GetRolesAsync(user);
+        var token = jwt.Create(user, roles);
 
-        if (!user.IsApproved)
-            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Awaiting admin approval." });
-
-        var passOk = await userManager.CheckPasswordAsync(user, dto.Password);
-        if (!passOk)
-            return Unauthorized(new { message = "Invalid credentials." });
-
-        var jwt = MakeJwt(user);
-
-        // 🔐 Set HttpOnly cookie so the browser “remembers” the session
-        Response.Cookies.Append("access_token", jwt, new CookieOptions
+        Response.Cookies.Append("access_token", token, new CookieOptions
         {
             HttpOnly = true,
-            Secure = true,               // required for SameSite=None over HTTPS
-            SameSite = SameSiteMode.None, // because frontend is on a different origin (localhost:3000)
-            Expires = DateTimeOffset.UtcNow.AddDays(7),
-            IsEssential = true
+            Secure = true,
+            SameSite = SameSiteMode.None,
+            Path = "/"
         });
 
         return Ok(new
         {
-            token = jwt,
-            user = new { user.Id, user.UserName, user.Email, user.MobileNumber, user.NicNumber }
+            token,
+            user = new
+            {
+                user.Id,
+                user.FullName,
+                user.UserName,
+                user.Email,
+                user.PhoneNumber,
+                user.IsApproved,
+                user.NicImagePath,
+                user.SelfiePath
+            }
         });
     }
 
-    // --- GET /api/auth/me (for the frontend to check session) ---
-    [HttpGet("me")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<IActionResult> Me()
-    {
-        var uid = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(uid)) return Unauthorized(new { message = "Unauthorized" });
-
-        var user = await userManager.FindByIdAsync(uid);
-        if (user == null) return Unauthorized(new { message = "Unauthorized" });
-
-        return Ok(new
-        {
-            userId = uid,
-            email = user.Email,
-            userName = user.UserName,
-            name = user.FullName
-        });
-    }
-
-    // --- POST /api/auth/logout ---
+    // POST /api/auth/logout (optional)
     [HttpPost("logout")]
     public IActionResult Logout()
     {
-        Response.Cookies.Delete("access_token", new CookieOptions
-        {
-            Secure = true,
-            SameSite = SameSiteMode.None
-        });
-        return Ok(new { ok = true });
+        Response.Cookies.Delete("access_token", new CookieOptions { Path = "/" });
+        return Ok(new { message = "Signed out." });
     }
 
-    // ===== utilities =====
-    private string MakeJwt(ApplicationUser user)
-    {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Key));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+    // === Forgot password (OTP via email) ===
 
-        var claims = new[]
+    // POST /api/auth/forgot
+    [HttpPost("forgot")]
+    public async Task<IActionResult> Forgot([FromBody] ForgotPasswordRequest req)
+    {
+        var user = await userManager.FindByEmailAsync(req.Email);
+        if (user is null) return Ok(new { message = "If the email exists, an OTP has been sent." });
+
+        var code = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
+        var ticket = new PasswordResetTicket
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
-            new Claim("username", user.UserName ?? "")
+            UserId = user.Id,
+            OtpHash = Hash(code),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(10)
         };
+        db.PasswordResetTickets.Add(ticket);
+        await db.SaveChangesAsync();
 
-        var token = new JwtSecurityToken(
-            issuer: _jwt.Issuer,
-            audience: _jwt.Audience,
-            claims: claims,
-            expires: DateTime.UtcNow.AddDays(7),
-            signingCredentials: creds);
+        await emailSender.SendAsync(user.Email!, "Your password reset code",
+            $"<p>Use this code within 10 minutes: <b>{code}</b></p>");
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return Ok(new { message = "If the email exists, an OTP has been sent." });
     }
 
-    private static long selfiesize(IFormFile f) => f?.Length ?? 0;
-
-    private async Task<string> SaveUpload(IFormFile file, string subfolder)
+    // POST /api/auth/verify-otp
+    [HttpPost("verify-otp")]
+    public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest req)
     {
-        var webroot = env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-        var folder = Path.Combine(webroot, "uploads", subfolder);
-        Directory.CreateDirectory(folder);
+        var user = await userManager.FindByEmailAsync(req.Email);
+        if (user is null) return Unauthorized(new { message = "Invalid code." });
 
-        var safe = MakeSafeFileName(file.FileName);
-        var nameOnly = Path.GetFileNameWithoutExtension(safe);
-        var ext = Path.GetExtension(safe);
-        var full = Path.Combine(folder, safe);
-        int i = 1;
-        while (System.IO.File.Exists(full))
-        {
-            safe = $"{nameOnly}-{i++}{ext}";
-            full = Path.Combine(folder, safe);
-        }
+        var ticket = await db.PasswordResetTickets
+            .Where(t => t.UserId == user.Id && !t.Used && t.ExpiresAt > DateTime.UtcNow)
+            .OrderByDescending(t => t.CreatedAt)
+            .FirstOrDefaultAsync();
 
-        using var fs = new FileStream(full, FileMode.CreateNew);
-        await file.CopyToAsync(fs);
+        if (ticket is null || ticket.OtpHash != Hash(req.Code))
+            return Unauthorized(new { message = "Invalid or expired code." });
 
-        return $"/uploads/{subfolder}/{Uri.EscapeDataString(safe)}";
+        ticket.VerifiedAt = DateTime.UtcNow;
+        ticket.ResetToken = Guid.NewGuid().ToString("N");
+        await db.SaveChangesAsync();
+
+        return Ok(new { resetToken = ticket.ResetToken });
     }
 
-    private static string MakeSafeFileName(string raw)
+    // POST /api/auth/reset-password
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest req)
     {
-        var name = Path.GetFileName(raw);
-        foreach (var c in Path.GetInvalidFileNameChars()) name = name.Replace(c, '_');
-        return name.Replace(" ", "_");
+        var ticket = await db.PasswordResetTickets
+            .FirstOrDefaultAsync(t => t.ResetToken == req.ResetToken && !t.Used && t.VerifiedAt != null && t.ExpiresAt > DateTime.UtcNow);
+        if (ticket is null) return Unauthorized(new { message = "Invalid reset token." });
+
+        var user = await userManager.FindByIdAsync(ticket.UserId);
+        if (user is null) return NotFound();
+
+        var token = await userManager.GeneratePasswordResetTokenAsync(user);
+        var res = await userManager.ResetPasswordAsync(user, token, req.NewPassword);
+        if (!res.Succeeded) return BadRequest(new { errors = res.Errors });
+
+        ticket.Used = true;
+        await db.SaveChangesAsync();
+
+        return Ok(new { message = "Password has been reset. Please login." });
+    }
+
+    // helpers
+    private static string Hash(string value)
+    {
+        using var sha = SHA256.Create();
+        return Convert.ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(value)));
+    }
+
+    private static string ToWebPath(string wwwroot, string absolutePath)
+    {
+        var rel = Path.GetRelativePath(wwwroot, absolutePath).Replace('\\', '/');
+        return "/" + rel;
     }
 }
