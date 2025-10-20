@@ -15,9 +15,7 @@ obj/
 *.sln.iml
 
 # ASP.NET publish outputs
-publish/
-wwwroot/images/
-wwwroot/uploads/
+
 appsettings.Development.json
 
 # =========================
