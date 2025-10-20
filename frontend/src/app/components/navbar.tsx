@@ -1,5 +1,4 @@
-﻿
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -7,13 +6,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export default function Navbar() {
   // ---- state
-  const [isOpen, setIsOpen] = useState(false); 
-  const [menuOpen, setMenuOpen] = useState(false); 
-<<<<<<< HEAD
-  const [user, setUser] = useState<any | null>(null); 
-=======
-  const [user, setUser] = useState(null); 
->>>>>>> 6e42ab1118c1ef492e5f13e9c6c4dd078e5e1767
+  const [isOpen, setIsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
@@ -81,7 +76,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white border-b border-gray-200 shadow-md relative z-50 ">
+    <nav className="bg-white border-b border-gray-200 shadow-md relative z-50">
       <div className="mx-auto px-3 py-1 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center">
@@ -97,7 +92,7 @@ export default function Navbar() {
             Auctions
           </Link>
 
-          {/* Services dropdown (login-gated) */}
+          {/* Services dropdown */}
           <div className="relative group">
             <button
               className={`${linkClasses("/services")} inline-flex items-center`}
@@ -209,7 +204,9 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       <div
-        className={`md:hidden bg-gray-50 border-t ${isOpen ? "block" : "hidden"} rounded-md mx-4 mt-2 p-2`}
+        className={`md:hidden bg-gray-50 border-t ${
+          isOpen ? "block" : "hidden"
+        } rounded-md mx-4 mt-2 p-2`}
       >
         <Link href="/" className={linkClasses("/")}>
           Home
