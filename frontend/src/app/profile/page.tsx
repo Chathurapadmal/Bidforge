@@ -1,156 +1,126 @@
-﻿// src/app/profile/page.tsx
-"use client";
+﻿"use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { API_BASE } from "../../lib/config";
-
-type Me = {
-  userName: string;
-  email: string;
-  fullName?: string | null;
-  profilePicture?: string | null; // "/profile-pictures/abc.jpg" or absolute URL
-};
-
-const PLACEHOLDER = "/placeholder.png";
-
-function resolveImg(url?: string | null) {
-  if (!url || !url.trim()) return PLACEHOLDER;
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  // server returned a relative path — prefix with API_BASE
-  return `${API_BASE}${url}`;
-}
+import Image from "next/image";
 
 export default function ProfilePage() {
-  const [me, setMe] = useState<Me | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-
-  const router = useRouter();
-
-  async function fetchMe() {
-    setErr(null);
-    const res = await fetch(`${API_BASE}/api/profile`, {
-      credentials: "include",
-      headers: { Accept: "application/json" },
-    });
-    if (res.status === 401) {
-      router.replace(`/auth/login?next=/profile`);
-      return null;
-    }
-    if (!res.ok) {
-      setErr(`Failed to load profile: ${res.status} ${res.statusText}`);
-      return null;
-    }
-    const j = (await res.json()) as Me;
-    setMe(j);
-    return j;
-  }
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const data = await fetchMe();
-        if (!active) return;
-        if (data) setMe(data);
-      } catch (e: any) {
-        if (active) setErr(e?.message || "Failed to load profile");
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [router]);
-
-  function onPickFile(f?: File | null) {
-    setFile(f ?? null);
-    if (f) {
-      const url = URL.createObjectURL(f);
-      setPreview(url);
-    } else {
-      setPreview(null);
-    }
-  }
-
-  async function onUpload() {
-    if (!file) return;
-    setErr(null);
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch(`${API_BASE}/api/profile/upload-picture`, {
-        method: "POST",
-        credentials: "include",
-        body: fd,
-      });
-      if (res.status === 401) {
-        router.replace(`/auth/login?next=/profile`);
-        return;
-      }
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(text || `Upload failed: ${res.status}`);
-      }
-      await fetchMe(); // refresh profile data
-      setFile(null);
-      setPreview(null);
-    } catch (e: any) {
-      setErr(e?.message ?? "Upload failed");
-    }
-  }
-
-  if (loading) return <div className="p-6">Loading…</div>;
-  if (err) return <div className="p-6 text-red-600">{err}</div>;
-  if (!me) return null;
-
-  const imgSrc = preview ?? resolveImg(me.profilePicture);
-
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="max-w-lg mx-auto px-6 py-10">
-        <h1 className="text-2xl font-bold mb-6">Your Profile</h1>
-
-        <div className="bg-white rounded-xl border p-6 space-y-4">
+    <div className="min-h-screen bg-[#f5f5f5] flex flex-col items-center justify-start p-10 space-y-10">
+      {/* ========== PROFILE DETAILS SECTION ========== */}
+      <section className="w-full max-w-6xl bg-white rounded-3xl shadow-2xl ring-1 ring-gray-200 overflow-hidden p-10">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-gray-200 pb-6 mb-8">
           <div className="flex items-center gap-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={imgSrc}
-              alt="Profile"
-              className="w-24 h-24 rounded-full object-cover border"
+            <Image
+              src="/profile-avatar.png"
+              alt="Profile Avatar"
+              width={90}
+              height={90}
+              className="rounded-full border border-gray-300"
             />
             <div>
-              <div className="text-lg font-semibold">
-                {me.fullName?.trim() || me.userName}
-              </div>
-              <div className="text-gray-600">{me.email}</div>
+              <h1 className="text-3xl font-semibold text-gray-900">S.W.P Saranga</h1>
+              <p className="text-gray-500 text-sm">BidForge Member since 2024</p>
             </div>
           </div>
-
-          <div className="pt-4 border-t">
-            <label className="block text-sm font-medium mb-1">
-              Update profile picture
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => onPickFile(e.target.files?.[0] || null)}
-              className="block"
-            />
-            <button
-              disabled={!file}
-              onClick={onUpload}
-              className="mt-3 inline-flex items-center rounded bg-blue-600 px-4 py-2 text-white hover:opacity-90 disabled:opacity-60"
-            >
-              Upload
-            </button>
-          </div>
+          <button className="mt-4 sm:mt-0 bg-[#0b2b23] text-white px-5 py-2 rounded-lg hover:bg-[#134c3a] transition-all">
+            Edit Profile
+          </button>
         </div>
+
+        {/* Profile Info */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <Detail label="Full Name" value="S.W.P Saranga" />
+          <Detail label="Email" value="saranga@example.com" />
+          <Detail label="Phone" value="+94 77 123 4567" />
+          <Detail
+            label="Address"
+            value="No. 45, Station Road, Homagama, Colombo, Sri Lanka"
+          />
+          <Detail label="Date of Birth" value="1999-07-20" />
+          <Detail label="Joined" value="2024-03-15" />
+        </div>
+      </section>
+
+      {/* ========== MY BIDS SECTION ========== */}
+      <section className="w-full max-w-6xl bg-white rounded-3xl shadow-2xl ring-1 ring-gray-200 overflow-hidden p-10">
+        <div className="flex items-center justify-between mb-6 border-b border-gray-200 pb-4">
+          <h2 className="text-3xl font-semibold text-gray-900">My Bids</h2>
+          <p className="text-gray-500 text-sm">Showing your latest bids</p>
+        </div>
+
+        {/* Example Bids */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <BidCard
+            title="Toyota Allion 260 (2017)"
+            price="LKR 4,250,000"
+            date="Bid placed on Oct 10, 2025"
+            image="/car-sample.jpg"
+          />
+          <BidCard
+            title="Apple MacBook Air M2"
+            price="LKR 410,000"
+            date="Bid placed on Oct 15, 2025"
+            image="/macbook.jpg"
+          />
+          <BidCard
+            title="Samsung 55'' Smart TV"
+            price="LKR 180,000"
+            date="Bid placed on Oct 18, 2025"
+            image="/tv.jpg"
+          />
+          <BidCard
+            title="Honda Dio Scooter"
+            price="LKR 345,000"
+            date="Bid placed on Oct 20, 2025"
+            image="/bike.jpg"
+          />
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="text-gray-500 text-sm mt-6">
+        © 2025 BidForge. All Rights Reserved.
+      </footer>
+    </div>
+  );
+}
+
+// Profile detail row
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-gray-700 uppercase mb-1">{label}</h3>
+      <p className="text-gray-800">{value}</p>
+    </div>
+  );
+}
+
+// Bid card component
+function BidCard({
+  title,
+  price,
+  date,
+  image,
+}: {
+  title: string;
+  price: string;
+  date: string;
+  image: string;
+}) {
+  return (
+    <div className="flex items-center gap-4 border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition bg-white">
+      <Image
+        src={image}
+        alt={title}
+        width={100}
+        height={100}
+        className="rounded-lg object-cover"
+      />
+      <div className="flex-1">
+        <h4 className="font-semibold text-gray-900">{title}</h4>
+        <p className="text-gray-600 text-sm">{date}</p>
+        <p className="text-[#0b2b23] font-bold mt-1">{price}</p>
       </div>
-    </main>
+    </div>
   );
 }
