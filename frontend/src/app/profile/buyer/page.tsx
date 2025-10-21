@@ -18,7 +18,7 @@ export default function ProfilePage() {
               className="rounded-full border border-gray-300"
             />
             <div>
-              <h1 className="text-3xl font-semibold text-gray-900">S.W.P Saranga</h1>
+              <h1 className="text-3xl font-semibold text-gray-900">D.W.B Chamal</h1>
               <p className="text-gray-500 text-sm">BidForge Member since 2024</p>
             </div>
           </div>
@@ -29,8 +29,8 @@ export default function ProfilePage() {
 
         {/* Profile Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <Detail label="Full Name" value="S.W.P Saranga" />
-          <Detail label="Email" value="saranga@example.com" />
+          <Detail label="Full Name" value="H.K Mahesh" />
+          <Detail label="Email" value="mahesh@example.com" />
           <Detail label="Phone" value="+94 77 123 4567" />
           <Detail
             label="Address"
@@ -56,24 +56,7 @@ export default function ProfilePage() {
             date="Bid placed on Oct 10, 2025"
             image="/car-sample.jpg"
           />
-          <BidCard
-            title="Apple MacBook Air M2"
-            price="LKR 410,000"
-            date="Bid placed on Oct 15, 2025"
-            image="/macbook.jpg"
-          />
-          <BidCard
-            title="Samsung 55'' Smart TV"
-            price="LKR 180,000"
-            date="Bid placed on Oct 18, 2025"
-            image="/tv.jpg"
-          />
-          <BidCard
-            title="Honda Dio Scooter"
-            price="LKR 345,000"
-            date="Bid placed on Oct 20, 2025"
-            image="/bike.jpg"
-          />
+         
         </div>
       </section>
 
