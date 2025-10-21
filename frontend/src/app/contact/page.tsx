@@ -156,7 +156,7 @@ export default function ContactPage() {
               className="w-full border rounded px-3 py-2"
             />
             <textarea
-              name="message"np
+              name="message"
               placeholder="Message"
               rows={5}
               value={form.message}
