@@ -1,21 +1,22 @@
-﻿// src/app/LayoutClient.tsx
-"use client";
+﻿"use client";
 
-import "../lib/patchRepeat";
-import React from "react";
+import { usePathname } from "next/navigation";
 import Navbar from "./components/navbar";
 import Footer from "./components/Footer";
+import AdBar from "./components/AdBar";
 
-export default function LayoutClient({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function LayoutClient({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isAuth = pathname.startsWith("/auth") || pathname.startsWith("/payment");
+
   return (
     <>
       <Navbar />
+
       {children}
-      <Footer />
+
+      {!isAuth && <AdBar />}
+      {!isAuth && <Footer />}
     </>
   );
 }

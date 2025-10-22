@@ -2,7 +2,6 @@
 "use client";
 
 import Link from "next/link";
-import "./css/globals.css";
 import { useEffect, useMemo, useState } from "react";
 import PhotoSlider from "./components/slider";
 import Hero from "./components/hero";
@@ -18,7 +17,7 @@ type AuctionDto = {
   badge?: string | null;
 };
 
-import { API_BASE } from "../lib/Config";
+import { API_BASE } from "../lib/config";
 const PLACEHOLDER = "/placeholder.png";
 
 /* ---------- utils ---------- */
@@ -169,7 +168,9 @@ export default function Page() {
 
         {/* Top Photo Slider */}
         <div className="mt-2">
-          <PhotoSlider images={["slide1.jpg", "slide2.jpg", "slide3.jpg"]} />
+          <PhotoSlider
+            images={["slide1.jpg", "slide2.jpg", "slide3.jpg", ]}
+          />
         </div>
 
         {/* Featured Auctions */}

@@ -139,40 +139,35 @@ export default function PaymentPage() {
         <section className="flex flex-col md:flex-row">
           {/* Left Summary */}
           <div className="bg-white p-8 md:w-1/2 border-r border-gray-200">
-            <h3 className="text-2xl font-semibold mb-4 text-gray-900">Payment gateway</h3>
-            <div className="mt-6">
-              <p className="text-sm text-gray-600">Subscription fee</p>
-              <h2 className="text-4xl font-bold text-gray-900">
-                $96.00{" "}
-                <span className="text-base font-normal text-gray-500">/month</span>
-              </h2>
+            <h3 className="text-2xl font-semibold mb-4 text-gray-900">Amount</h3>
+           <div className="mt-6 text-gray-700 space-y-2">
+  <div className="flex justify-between">
+    <span>Item purchased</span>
+    <span>$96.00</span>
+  </div>
+  <div className="flex justify-between">
+    <span>Shipping</span>
+    <span>Free</span>
+  </div>
 
-              <div className="mt-6 text-gray-700 space-y-2">
-                <div className="flex justify-between">
-                  <span>Platform basic (billed monthly)</span>
-                  <span>$96.00</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>$96.00</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Tax</span>
-                  <span>$0.00</span>
-                </div>
-                <hr className="my-4 border-gray-300" />
-                <div className="flex justify-between font-semibold">
-                  <span>Total due today</span>
-                  <span>$96.00</span>
-                </div>
-              </div>
-            </div>
+  <div className="flex justify-between">
+    <span>Tax</span>
+    <span>$0.00</span>
+  </div>
+
+  <hr className="my-4 border-gray-300" />
+  <div className="flex justify-between font-semibold text-gray-900">
+    <span>Total payable</span>
+    <span>$96.00</span>
+  </div>
+</div>
+
           </div>
 
           {/* Right Form */}
           <div className="p-8 md:w-1/2">
             <h3 className="text-xl font-semibold text-gray-900 mb-6">
-              Complete registration payment
+              Complete payment
             </h3>
 
             {/* Payment methods */}
@@ -180,10 +175,7 @@ export default function PaymentPage() {
               <p className="text-sm font-semibold mb-2 text-gray-700">Payment methods</p>
               <div className="flex items-center gap-3">
                 <Image src="/visa.png" alt="Visa" width={40} height={25} />
-                <Image src="/stripe.png" alt="Stripe" width={40} height={25} />
-                <Image src="/paypal.png" alt="PayPal" width={40} height={25} />
                 <Image src="/mastercard.png" alt="Mastercard" width={40} height={25} />
-                <Image src="/gpay.png" alt="Google Pay" width={40} height={25} />
               </div>
             </div>
 
