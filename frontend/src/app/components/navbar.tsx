@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { MdAccountCircle } from "react-icons/md";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -147,16 +148,17 @@ export default function Navbar() {
 
           <div className="relative ml-1" ref={menuRef}>
             <button
-              className="flex items-center gap-1 text-gray-500 rounded-md px-2 py-1 hover:text-gray-100 hover:bg-gray-500"
+              className="flex items-center gap-1 text-gray-500 rounded-md px-2 py-1 hover:text-gray-100 hover:bg-gray-200"
               onClick={() => setMenuOpen((v) => !v)}
               aria-label="Open profile menu"
               aria-expanded={menuOpen}
               aria-haspopup="menu"
               type="button"
             >
-              <span className="material-symbols-outlined text-lg">
-                account_circle
-              </span>
+              
+                <MdAccountCircle className="w-6 h-6 text-gray-600" />
+
+             
               {!loading && !cookieLoading && isAuthed && (
                 <span className="ml-1 text-sm text-gray-700">
                   {authedUser?.userName || authedUser?.email || "Account"}
