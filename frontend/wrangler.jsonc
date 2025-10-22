@@ -1,7 +1,0 @@
-{
-  "name": "bidforge",
-  "main": ".open-next/worker/index.mjs",
-  "compatibility_date": "2025-08-01",
-  "assets": { "directory": ".open-next/assets" },
-  "observability": { "enabled": true }
-}
