@@ -1,4 +1,3 @@
-// src/app/auth/register/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -12,15 +11,17 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr(null);
+    setInfo(null);
     setBusy(true);
     try {
       await register(email, password, name || undefined);
-      router.push("/profile");
+      setInfo("Account created! Check your email for a verification link.");
     } catch (e: any) {
       setErr(e?.message ?? "Register failed");
     } finally {
@@ -32,6 +33,7 @@ export default function RegisterPage() {
     <main className="max-w-md mx-auto p-6">
       <h1 className="text-2xl font-bold">Register</h1>
       {err && <p className="mt-4 text-red-600">{err}</p>}
+      {info && <p className="mt-4 text-green-700">{info}</p>}
       <form onSubmit={onSubmit} className="mt-6 grid gap-4">
         <input
           className="border p-2 rounded"

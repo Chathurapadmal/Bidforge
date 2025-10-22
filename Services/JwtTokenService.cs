@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Bidforge.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
@@ -10,42 +11,55 @@ namespace Bidforge.Services;
 
 public class JwtTokenService
 {
-    private readonly string _issuer;
-    private readonly string _audience;
-    private readonly SymmetricSecurityKey _signingKey;
+    private readonly IConfiguration _cfg;
+    private readonly UserManager<ApplicationUser> _users;
 
-    public JwtTokenService(IConfiguration cfg)
+    public JwtTokenService(IConfiguration cfg, UserManager<ApplicationUser> users)
     {
-        var jwt = cfg.GetSection("Jwt");
-        _issuer = jwt["Issuer"] ?? "Bidforge";
-        _audience = jwt["Audience"] ?? "BidforgeClient";
-
-        // same dev key as Program.cs
-        var keyBytes = Convert.FromHexString("a06f684c8ed4b8cd631643301ea09ffde645a7940ebc7c660d0bfef5fe270294");
-        _signingKey = new SymmetricSecurityKey(keyBytes);
+        _cfg = cfg;
+        _users = users;
     }
 
-    public string CreateToken(ApplicationUser user, TimeSpan? lifetime = null)
+    public string CreateToken(ApplicationUser user)
     {
+        var jwt = _cfg.GetSection("Jwt");
+        var issuer = jwt["Issuer"] ?? "Bidforge";
+        var audience = jwt["Audience"] ?? "BidforgeClient";
+
+        // Same hex key used in Program.cs
+        var keyHex = "a06f684c8ed4b8cd631643301ea09ffde645a7940ebc7c660d0bfef5fe270294";
+        var key = new SymmetricSecurityKey(Convert.FromHexString(keyHex));
+
         var now = DateTime.UtcNow;
+
+        // Load roles so token has role claims
+        var roles = _users.GetRolesAsync(user).GetAwaiter().GetResult() ?? new List<string>();
+
         var claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Sub, user.Id),
-            new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
-            new("name", user.DisplayName ?? user.UserName ?? user.Email ?? string.Empty),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
+            new Claim("name", user.DisplayName ?? user.Email ?? ""),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
+            new Claim(JwtRegisteredClaimNames.Nbf, new DateTimeOffset(now).ToUnixTimeSeconds().ToString()),
+            new Claim(JwtRegisteredClaimNames.Exp, new DateTimeOffset(now.AddDays(7)).ToUnixTimeSeconds().ToString()),
+            new Claim(JwtRegisteredClaimNames.Iss, issuer),
+            new Claim(JwtRegisteredClaimNames.Aud, audience)
         };
 
-        var creds = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256);
-        var jwt = new JwtSecurityToken(
-            issuer: _issuer,
-            audience: _audience,
+        foreach (var r in roles)
+            claims.Add(new Claim(ClaimTypes.Role, r));
+
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: audience,
             claims: claims,
             notBefore: now,
-            expires: now.Add(lifetime ?? TimeSpan.FromDays(7)),
+            expires: now.AddDays(7),
             signingCredentials: creds
         );
 
-        return new JwtSecurityTokenHandler().WriteToken(jwt);
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }

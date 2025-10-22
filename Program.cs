@@ -3,6 +3,7 @@ using Bidforge.Data;
 using Bidforge.Models;
 using Bidforge.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
@@ -11,15 +12,15 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// -------------------------------
+// -------------------------------------
 // Connection string
-// -------------------------------
+// -------------------------------------
 var cs = builder.Configuration.GetConnectionString("DefaultConnection")
-         ?? "Server=localhost,1433;Database=BidforgeDb;User Id=chathura;Password=7895123;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true;Connect Timeout=60";
+         ?? "Server=localhost,1433;Database=BidforgeDb;User Id=sa;Password=yourStrong(!)Password;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true;Connect Timeout=60";
 
-// -------------------------------
+// -------------------------------------
 // Services
-// -------------------------------
+// -------------------------------------
 builder.Services.AddDbContext<AppDbContext>(opt =>
 {
     opt.UseSqlServer(cs, sql =>
@@ -29,30 +30,49 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
     });
 });
 
-// Identity (ApplicationUser with DisplayName/AvatarUrl)
-builder.Services.AddIdentityCore<ApplicationUser>(opt =>
+// Data Protection (required by DataProtector token provider)
+builder.Services.AddDataProtection();
+
+// Identity (ApplicationUser has DisplayName/AvatarUrl/KYC fields)
+var idBuilder = builder.Services.AddIdentityCore<ApplicationUser>(opt =>
 {
     opt.User.RequireUniqueEmail = true;
+    // If you want framework to block sign-in until confirmed:
+    // opt.SignIn.RequireConfirmedEmail = true;
+
     opt.Password.RequireDigit = false;
     opt.Password.RequireUppercase = false;
     opt.Password.RequireNonAlphanumeric = false;
     opt.Password.RequiredLength = 6;
+
+    // Ensure Identity uses the default provider for email confirmation tokens
+    opt.Tokens.EmailConfirmationTokenProvider = TokenOptions.DefaultProvider;
 })
 .AddRoles<IdentityRole>()
 .AddEntityFrameworkStores<AppDbContext>()
-.AddSignInManager<SignInManager<ApplicationUser>>();
+.AddSignInManager<SignInManager<ApplicationUser>>()
+.AddDefaultTokenProviders(); // registers DataProtector provider etc.
 
+// Optional: tune token lifespans
+builder.Services.Configure<DataProtectionTokenProviderOptions>(o =>
+{
+    o.TokenLifespan = TimeSpan.FromHours(24);
+});
+
+// App services
 builder.Services.AddScoped<JwtTokenService>();
+builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));
+builder.Services.AddScoped<IEmailSender, EmailSender>();
 
-// -------------------------------
-// JWT (dev key)
-// -------------------------------
+// -------------------------------------
+// JWT (dev key). Replace with secure key in prod (User Secrets/KeyVault).
+// -------------------------------------
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtIssuer = jwtSection["Issuer"] ?? "Bidforge";
 var jwtAudience = jwtSection["Audience"] ?? "BidforgeClient";
 var cookieName = jwtSection["CookieName"] ?? "auth";
 
-// 32-byte key (hex)
+// 32-byte symmetric key from hex
 var keyBytes = Convert.FromHexString("a06f684c8ed4b8cd631643301ea09ffde645a7940ebc7c660d0bfef5fe270294");
 if (keyBytes.Length < 32) throw new InvalidOperationException("JWT key must be >= 32 bytes.");
 var signingKey = new SymmetricSecurityKey(keyBytes);
@@ -77,7 +97,7 @@ builder.Services.AddAuthentication(o =>
         ValidateLifetime = true,
         ClockSkew = TimeSpan.FromSeconds(30)
     };
-    // Optional: allow JWT via cookie "auth" (if you add it later)
+    // Also accept JWT from cookie "auth" (optional)
     o.Events = new JwtBearerEvents
     {
         OnMessageReceived = ctx =>
@@ -95,16 +115,17 @@ builder.Services.AddAuthentication(o =>
 
 builder.Services.AddAuthorization();
 
-// CORS for Next.js at localhost:3000
+// CORS for Next.js
 builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("frontend", p => p
         .WithOrigins("http://localhost:3000", "https://localhost:3000")
         .AllowAnyHeader()
-        .AllowAnyMethod());
+        .AllowAnyMethod()
+        .AllowCredentials());
 });
 
-// Large multipart uploads
+// Large multipart uploads (images/KYC)
 builder.Services.Configure<FormOptions>(o =>
 {
     o.MultipartBodyLengthLimit = 20_000_000; // 20MB
@@ -117,9 +138,9 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// -------------------------------
+// -------------------------------------
 // Pipeline
-// -------------------------------
+// -------------------------------------
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -127,22 +148,23 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Ensure static folders (images)
+// Ensure static upload folders
 var env = app.Services.GetRequiredService<IWebHostEnvironment>();
 var webRoot = env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot");
 Directory.CreateDirectory(Path.Combine(webRoot, "uploads", "auctions"));
 Directory.CreateDirectory(Path.Combine(webRoot, "uploads", "avatars"));
+Directory.CreateDirectory(Path.Combine(webRoot, "uploads", "kyc"));
 
-// app.UseHttpsRedirection(); // keep off for local HTTP testing
+// app.UseHttpsRedirection(); // keep off for HTTP dev if preferred
 app.UseStaticFiles();          // serves /uploads/**
 
 app.UseCors("frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
-// -------------------------------
-// DB init (migrate or ensure created)
-// -------------------------------
+// -------------------------------------
+// DB migrate + Role seeding + Optional bootstrap admin
+// -------------------------------------
 using (var scope = app.Services.CreateScope())
 {
     var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
@@ -158,11 +180,60 @@ using (var scope = app.Services.CreateScope())
         db.Database.EnsureCreated();
         logger.LogInformation("Database ensured via EnsureCreated.");
     }
+
+    // Seed roles and optional bootstrap admin
+    var roleMgr = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    var userMgr = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+    async Task EnsureRole(string name)
+    {
+        if (!await roleMgr.RoleExistsAsync(name))
+            await roleMgr.CreateAsync(new IdentityRole(name));
+    }
+
+    await EnsureRole("User");
+    await EnsureRole("Admin");
+
+    var adminEmail = builder.Configuration["BootstrapAdmin:Email"];
+    var adminPass = builder.Configuration["BootstrapAdmin:Password"];
+
+    if (!string.IsNullOrWhiteSpace(adminEmail) && !string.IsNullOrWhiteSpace(adminPass))
+    {
+        var admin = await userMgr.FindByEmailAsync(adminEmail);
+        if (admin is null)
+        {
+            admin = new ApplicationUser
+            {
+                UserName = adminEmail,
+                Email = adminEmail,
+                EmailConfirmed = true,
+                DisplayName = "Admin"
+            };
+            var res = await userMgr.CreateAsync(admin, adminPass);
+            if (res.Succeeded)
+            {
+                await userMgr.AddToRoleAsync(admin, "Admin");
+                logger.LogInformation("Bootstrap admin created: {Email}", adminEmail);
+            }
+            else
+            {
+                logger.LogWarning("Failed to create bootstrap admin: {Err}", string.Join("; ", res.Errors.Select(e => e.Description)));
+            }
+        }
+        else
+        {
+            if (!await userMgr.IsInRoleAsync(admin, "Admin"))
+            {
+                await userMgr.AddToRoleAsync(admin, "Admin");
+                logger.LogInformation("Bootstrap admin promoted: {Email}", adminEmail);
+            }
+        }
+    }
 }
 
-// -------------------------------
-// Debug endpoint list
-// -------------------------------
+// -------------------------------------
+// Debug endpoint list (dev helper)
+// -------------------------------------
 app.MapGet("/_endpoints", (EndpointDataSource es) =>
 {
     var items = es.Endpoints
@@ -180,7 +251,7 @@ app.MapGet("/_endpoints", (EndpointDataSource es) =>
     return Results.Json(items);
 });
 
-// Controllers (Auctions, Profile, Notifications, Bids, etc.)
+// Controllers
 app.MapControllers();
 
 app.Run();

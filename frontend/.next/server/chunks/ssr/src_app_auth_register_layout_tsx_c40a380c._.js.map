@@ -2,5 +2,5 @@
   "version": 3,
   "sources": [],
   "sections": [
-    {"offset": {"line": 5, "column": 0}, "map": {"version":3,"sources":["file:///D:/Bidforge/frontend/src/app/auth/register/layout.tsx"],"sourcesContent":["export default function RegisterLayout({\r\n  children,\r\n}: {\r\n  children: React.ReactNode;\r\n}) {\r\n  return <>{children}</>;\r\n}\r\n"],"names":[],"mappings":";;;;;AAAe,SAAS,eAAe,EACrC,QAAQ,EAGT;IACC,qBAAO;kBAAG;;AACZ","debugId":null}}]
+    {"offset": {"line": 5, "column": 0}, "map": {"version":3,"sources":["file:///E:/New%20folder/Bidforge/frontend/src/app/auth/register/layout.tsx"],"sourcesContent":["export default function RegisterLayout({\r\n  children,\r\n}: {\r\n  children: React.ReactNode;\r\n}) {\r\n  return <>{children}</>;\r\n}\r\n"],"names":[],"mappings":";;;;;AAAe,SAAS,eAAe,EACrC,QAAQ,EAGT;IACC,qBAAO;kBAAG;;AACZ","debugId":null}}]
 }

@@ -5,7 +5,6 @@
 
 var { k: __turbopack_refresh__, m: module } = __turbopack_context__;
 {
-// src/app/auth/register/page.tsx
 __turbopack_context__.s({
     "default": ()=>RegisterPage
 });
@@ -27,14 +26,16 @@ function RegisterPage() {
     const [name, setName] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])("");
     const [password, setPassword] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])("");
     const [err, setErr] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    const [info, setInfo] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const [busy, setBusy] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const onSubmit = async (e)=>{
         e.preventDefault();
         setErr(null);
+        setInfo(null);
         setBusy(true);
         try {
             await register(email, password, name || undefined);
-            router.push("/profile");
+            setInfo("Account created! Check your email for a verification link.");
         } catch (e) {
             var _e_message;
             setErr((_e_message = e === null || e === void 0 ? void 0 : e.message) !== null && _e_message !== void 0 ? _e_message : "Register failed");
@@ -50,7 +51,7 @@ function RegisterPage() {
                 children: "Register"
             }, void 0, false, {
                 fileName: "[project]/src/app/auth/register/page.tsx",
-                lineNumber: 33,
+                lineNumber: 34,
                 columnNumber: 7
             }, this),
             err && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -58,8 +59,16 @@ function RegisterPage() {
                 children: err
             }, void 0, false, {
                 fileName: "[project]/src/app/auth/register/page.tsx",
-                lineNumber: 34,
+                lineNumber: 35,
                 columnNumber: 15
+            }, this),
+            info && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                className: "mt-4 text-green-700",
+                children: info
+            }, void 0, false, {
+                fileName: "[project]/src/app/auth/register/page.tsx",
+                lineNumber: 36,
+                columnNumber: 16
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("form", {
                 onSubmit: onSubmit,
@@ -73,7 +82,7 @@ function RegisterPage() {
                         onChange: (e)=>setName(e.target.value)
                     }, void 0, false, {
                         fileName: "[project]/src/app/auth/register/page.tsx",
-                        lineNumber: 36,
+                        lineNumber: 38,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -85,7 +94,7 @@ function RegisterPage() {
                         required: true
                     }, void 0, false, {
                         fileName: "[project]/src/app/auth/register/page.tsx",
-                        lineNumber: 43,
+                        lineNumber: 45,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -97,7 +106,7 @@ function RegisterPage() {
                         required: true
                     }, void 0, false, {
                         fileName: "[project]/src/app/auth/register/page.tsx",
-                        lineNumber: 51,
+                        lineNumber: 53,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -106,23 +115,23 @@ function RegisterPage() {
                         children: busy ? "Creating account…" : "Register"
                     }, void 0, false, {
                         fileName: "[project]/src/app/auth/register/page.tsx",
-                        lineNumber: 59,
+                        lineNumber: 61,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/auth/register/page.tsx",
-                lineNumber: 35,
+                lineNumber: 37,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/auth/register/page.tsx",
-        lineNumber: 32,
+        lineNumber: 33,
         columnNumber: 5
     }, this);
 }
-_s(RegisterPage, "uugrvN1awTG383uDLePqYckC7co=", false, function() {
+_s(RegisterPage, "tYJFJMLuEPJX0yh/I4WPJve3WKA=", false, function() {
     return [
         __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$session$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useSession"],
         __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRouter"]

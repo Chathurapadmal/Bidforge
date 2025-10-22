@@ -809,7 +809,7 @@ function Footer() {
                             href: "https://wa.me/123456789",
                             target: "_blank",
                             children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$icons$2f$fa$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FaLinkedin"], {
-                                className: "w-7 h-7 text-green-500 hover:scale-110 transition"
+                                className: "w-7 h-7 text-blue-500 hover:scale-110 transition"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/components/Footer.tsx",
                                 lineNumber: 59,
@@ -819,6 +819,21 @@ function Footer() {
                             fileName: "[project]/src/app/components/Footer.tsx",
                             lineNumber: 57,
                             columnNumber: 21
+                        }, this),
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
+                            href: "https://instagram.com/yourprofile",
+                            target: "_blank",
+                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$icons$2f$fa$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FaInstagram"], {
+                                className: "w-7 h-7 text-pink-500 hover:scale-110 transition"
+                            }, void 0, false, {
+                                fileName: "[project]/src/app/components/Footer.tsx",
+                                lineNumber: 66,
+                                columnNumber: 3
+                            }, this)
+                        }, void 0, false, {
+                            fileName: "[project]/src/app/components/Footer.tsx",
+                            lineNumber: 65,
+                            columnNumber: 1
                         }, this)
                     ]
                 }, void 0, true, {
@@ -827,7 +842,7 @@ function Footer() {
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                    className: "border-t border-gray-300 dark:border-border-dark pt-4",
+                    className: "border-t border-blue-300 dark:border-border-dark pt-4",
                     children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                         className: "text-sm text-gray-500 dark:text-gray-400",
                         children: [
@@ -837,18 +852,18 @@ function Footer() {
                                 children: "BidForge™"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/components/Footer.tsx",
-                                lineNumber: 71,
+                                lineNumber: 78,
                                 columnNumber: 36
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/components/Footer.tsx",
-                        lineNumber: 69,
+                        lineNumber: 76,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/app/components/Footer.tsx",
-                    lineNumber: 67,
+                    lineNumber: 74,
                     columnNumber: 9
                 }, this)
             ]

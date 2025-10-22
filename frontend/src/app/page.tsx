@@ -17,7 +17,7 @@ type AuctionDto = {
   badge?: string | null;
 };
 
-import { API_BASE } from "../lib/config";
+import { API_BASE } from "../lib/Config";
 const PLACEHOLDER = "/placeholder.png";
 
 /* ---------- utils ---------- */

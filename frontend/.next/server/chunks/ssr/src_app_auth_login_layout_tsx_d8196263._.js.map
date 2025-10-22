@@ -2,5 +2,5 @@
   "version": 3,
   "sources": [],
   "sections": [
-    {"offset": {"line": 5, "column": 0}, "map": {"version":3,"sources":["file:///D:/Bidforge/frontend/src/app/auth/login/layout.tsx"],"sourcesContent":["\n\nexport default function LoginLayout({\n\n  children,\n\n}: {\n\n  children: React.ReactNode;\n\n}) {\n\n  return <>{children}</>;\n\n}\n\n\r\n"],"names":[],"mappings":";;;;;AAEe,SAAS,YAAY,EAElC,QAAQ,EAMT;IAEC,qBAAO;kBAAG;;AAEZ","debugId":null}}]
+    {"offset": {"line": 5, "column": 0}, "map": {"version":3,"sources":["file:///E:/New%20folder/Bidforge/frontend/src/app/auth/login/layout.tsx"],"sourcesContent":["\n\nexport default function LoginLayout({\n\n  children,\n\n}: {\n\n  children: React.ReactNode;\n\n}) {\n\n  return <>{children}</>;\n\n}\n\n\r\n"],"names":[],"mappings":";;;;;AAEe,SAAS,YAAY,EAElC,QAAQ,EAMT;IAEC,qBAAO;kBAAG;;AAEZ","debugId":null}}]
 }

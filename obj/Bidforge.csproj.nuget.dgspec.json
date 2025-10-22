@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Bidforge\\Bidforge.csproj": {}
+    "E:\\New folder\\Bidforge\\Bidforge.csproj": {}
   },
   "projects": {
-    "D:\\Bidforge\\Bidforge.csproj": {
+    "E:\\New folder\\Bidforge\\Bidforge.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Bidforge\\Bidforge.csproj",
+        "projectUniqueName": "E:\\New folder\\Bidforge\\Bidforge.csproj",
         "projectName": "Bidforge",
-        "projectPath": "D:\\Bidforge\\Bidforge.csproj",
+        "projectPath": "E:\\New folder\\Bidforge\\Bidforge.csproj",
         "packagesPath": "C:\\Users\\Chathura\\.nuget\\packages",
-        "outputPath": "D:\\Bidforge\\obj\\",
+        "outputPath": "E:\\New folder\\Bidforge\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "D:\\Softwares\\VS sdk\\NuGetPackages"
@@ -50,6 +50,10 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
+            "MailKit": {
+              "target": "Package",
+              "version": "[4.14.1, )"
+            },
             "Microsoft.AspNetCore.Authentication.JwtBearer": {
               "target": "Package",
               "version": "[8.0.6, )"
@@ -72,6 +76,10 @@
               "suppressParent": "All",
               "target": "Package",
               "version": "[8.0.6, )"
+            },
+            "MimeKit": {
+              "target": "Package",
+              "version": "[4.14.0, )"
             },
             "Swashbuckle.AspNetCore": {
               "target": "Package",
