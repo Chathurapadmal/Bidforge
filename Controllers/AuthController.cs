@@ -1,6 +1,5 @@
 // File: Controllers/AuthController.cs
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using System.Security.Claims;
 using Bidforge.Models;
 using Bidforge.Services;
@@ -17,6 +16,7 @@ public class AuthController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _users;
     private readonly SignInManager<ApplicationUser> _signIn;
+    private readonly RoleManager<IdentityRole> _roles;
     private readonly JwtTokenService _jwt;
     private readonly IEmailSender _email;
     private readonly IConfiguration _cfg;
@@ -24,19 +24,28 @@ public class AuthController : ControllerBase
     public AuthController(
         UserManager<ApplicationUser> users,
         SignInManager<ApplicationUser> signIn,
+        RoleManager<IdentityRole> roles,
         JwtTokenService jwt,
         IEmailSender email,
         IConfiguration cfg)
     {
         _users = users;
         _signIn = signIn;
+        _roles = roles;
         _jwt = jwt;
         _email = email;
         _cfg = cfg;
     }
 
-    // ---------- DTOs ----------
-    public record AuthUserDto(string id, string? email, string? name, bool emailConfirmed);
+    // ---------------- DTOs ----------------
+    public record AuthUserDto(
+        string id,
+        string? email,
+        string? name,
+        bool emailConfirmed,
+        string[] roles
+    );
+
     public record AuthResp(string token, AuthUserDto user);
 
     public class RegisterDto
@@ -44,6 +53,7 @@ public class AuthController : ControllerBase
         [Required, EmailAddress] public string Email { get; set; } = default!;
         [Required, MinLength(6)] public string Password { get; set; } = default!;
         [MaxLength(100)] public string? Name { get; set; }
+        public string? Role { get; set; } // "User" (default) or "Admin" if allowed
     }
 
     public class LoginDto
@@ -58,8 +68,15 @@ public class AuthController : ControllerBase
         [Required] public string Token { get; set; } = default!;
     }
 
-    // ---------- Register ----------
-    // Creates user and emails a verification link (MailKit)
+    private async Task EnsureRoleAsync(string role)
+    {
+        if (!await _roles.RoleExistsAsync(role))
+            await _roles.CreateAsync(new IdentityRole(role));
+    }
+
+    // ---------------- Register ----------------
+    // Creates a user and emails a verification link (no auto-login).
+    // Set allowPublicAdmin=false if you DON'T want the public form to create admins.
     [HttpPost("register")]
     [AllowAnonymous]
     public async Task<IActionResult> Register([FromBody] RegisterDto dto)
@@ -77,11 +94,23 @@ public class AuthController : ControllerBase
             DisplayName = string.IsNullOrWhiteSpace(dto.Name) ? null : dto.Name!.Trim()
         };
 
-        var result = await _users.CreateAsync(user, dto.Password);
-        if (!result.Succeeded)
-            return BadRequest(new { message = string.Join("; ", result.Errors.Select(e => e.Description)) });
+        var create = await _users.CreateAsync(user, dto.Password);
+        if (!create.Succeeded)
+            return BadRequest(new { message = string.Join("; ", create.Errors.Select(e => e.Description)) });
 
-        // Generate email confirmation token and send verify link
+        // Roles: always add "User"
+        await EnsureRoleAsync("User");
+        await _users.AddToRoleAsync(user, "User");
+
+        // (Optional) Allow public admin creation? (flip to false for safety)
+        var allowPublicAdmin = true; // <-- set to false for production
+        if (allowPublicAdmin && string.Equals(dto.Role, "Admin", StringComparison.OrdinalIgnoreCase))
+        {
+            await EnsureRoleAsync("Admin");
+            await _users.AddToRoleAsync(user, "Admin");
+        }
+
+        // Email verification
         var token = await _users.GenerateEmailConfirmationTokenAsync(user);
         var encToken = Uri.EscapeDataString(token);
 
@@ -95,12 +124,12 @@ public class AuthController : ControllerBase
                <p>Please verify your email by clicking the link below:</p>
                <p><a href=""{verifyUrl}"">Verify my email</a></p>");
 
-        // No auto-login; frontend shows “check your email”
+        // No token returned — client should show “check your email”.
         return Ok(new { ok = true, userId = user.Id, email = user.Email });
     }
 
-    // ---------- Login ----------
-    // Enforces EmailConfirmed (return 403 if not verified)
+    // ---------------- Login ----------------
+    // Requires EmailConfirmed; returns JWT and user (with roles).
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
@@ -117,11 +146,12 @@ public class AuthController : ControllerBase
             return StatusCode(403, new { message = "Please verify your email before logging in." });
 
         var token = _jwt.CreateToken(user);
-        var u = new AuthUserDto(user.Id, user.Email, user.DisplayName ?? user.Email, user.EmailConfirmed);
+        var roles = (await _users.GetRolesAsync(user)).ToArray();
+        var u = new AuthUserDto(user.Id, user.Email, user.DisplayName ?? user.Email, user.EmailConfirmed, roles);
         return Ok(new AuthResp(token, u));
     }
 
-    // ---------- Verify Email ----------
+    // ---------------- Verify Email ----------------
     [HttpPost("verify-email")]
     [AllowAnonymous]
     public async Task<IActionResult> VerifyEmail([FromBody] VerifyDto dto)
@@ -139,7 +169,8 @@ public class AuthController : ControllerBase
         return Ok(new { ok = true });
     }
 
-    // ---------- Me ----------
+    // ---------------- Me ----------------
+    // Returns current user + roles (based on JWT).
     [HttpGet("me")]
     [Authorize]
     public async Task<IActionResult> Me()
@@ -152,7 +183,29 @@ public class AuthController : ControllerBase
         var user = await _users.FindByIdAsync(id);
         if (user is null) return Unauthorized();
 
-        var dto = new AuthUserDto(user.Id, user.Email, user.DisplayName ?? user.Email, user.EmailConfirmed);
+        var roles = (await _users.GetRolesAsync(user)).ToArray();
+        var dto = new AuthUserDto(user.Id, user.Email, user.DisplayName ?? user.Email, user.EmailConfirmed, roles);
+        return Ok(dto);
+    }
+
+    // ---------------- Session (alias) ----------------
+    // Some frontends call /api/auth/session — mirror "me" semantics.
+    [HttpGet("session")]
+    public async Task<IActionResult> Session()
+    {
+        if (!(User?.Identity?.IsAuthenticated ?? false))
+            return Unauthorized();
+
+        var id = User?.FindFirstValue("sub")
+                 ?? User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(id)) return Unauthorized();
+
+        var user = await _users.FindByIdAsync(id);
+        if (user is null) return Unauthorized();
+
+        var roles = (await _users.GetRolesAsync(user)).ToArray();
+        var dto = new AuthUserDto(user.Id, user.Email, user.DisplayName ?? user.Email, user.EmailConfirmed, roles);
         return Ok(dto);
     }
 }

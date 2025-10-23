@@ -1,26 +1,29 @@
+// File: Program.cs
 using System.Security.Claims;
 using Bidforge.Data;
 using Bidforge.Models;
 using Bidforge.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Http.Metadata;   // <-- for IHttpMethodMetadata
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Routing;         // EndpointDataSource, RouteEndpoint
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// -------------------------------------
+// ----------------------------------------------------
 // Connection string
-// -------------------------------------
+// ----------------------------------------------------
 var cs = builder.Configuration.GetConnectionString("DefaultConnection")
-         ?? "Server=localhost,1433;Database=BidforgeDb;User Id=sa;Password=yourStrong(!)Password;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true;Connect Timeout=60";
+         ?? "Server=localhost,1433;Database=BidforgeDb;User Id=chathura;Password=7895123;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true;Connect Timeout=60";
 
-// -------------------------------------
+// ----------------------------------------------------
 // Services
-// -------------------------------------
+// ----------------------------------------------------
+
+// EF Core
 builder.Services.AddDbContext<AppDbContext>(opt =>
 {
     opt.UseSqlServer(cs, sql =>
@@ -30,51 +33,50 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
     });
 });
 
-// Data Protection (required by DataProtector token provider)
-builder.Services.AddDataProtection();
-
-// Identity (ApplicationUser has DisplayName/AvatarUrl/KYC fields)
-var idBuilder = builder.Services.AddIdentityCore<ApplicationUser>(opt =>
+// Identity (Core) + Roles
+builder.Services.AddIdentityCore<ApplicationUser>(opt =>
 {
     opt.User.RequireUniqueEmail = true;
-    // If you want framework to block sign-in until confirmed:
-    // opt.SignIn.RequireConfirmedEmail = true;
-
     opt.Password.RequireDigit = false;
     opt.Password.RequireUppercase = false;
     opt.Password.RequireNonAlphanumeric = false;
     opt.Password.RequiredLength = 6;
 
-    // Ensure Identity uses the default provider for email confirmation tokens
-    opt.Tokens.EmailConfirmationTokenProvider = TokenOptions.DefaultProvider;
+    // We enforce email confirmation in the controller at login.
+    opt.SignIn.RequireConfirmedEmail = false;
 })
 .AddRoles<IdentityRole>()
 .AddEntityFrameworkStores<AppDbContext>()
 .AddSignInManager<SignInManager<ApplicationUser>>()
-.AddDefaultTokenProviders(); // registers DataProtector provider etc.
+.AddDefaultTokenProviders(); // needed for email confirmation tokens
 
-// Optional: tune token lifespans
-builder.Services.Configure<DataProtectionTokenProviderOptions>(o =>
+// Align Identity's claim types (role, user id) with what we validate in JWT
+builder.Services.PostConfigure<IdentityOptions>(opt =>
 {
-    o.TokenLifespan = TimeSpan.FromHours(24);
+    opt.ClaimsIdentity.RoleClaimType = ClaimTypes.Role;               // standard role claim
+    opt.ClaimsIdentity.UserIdClaimType = ClaimTypes.NameIdentifier;   // user id
 });
 
-// App services
-builder.Services.AddScoped<JwtTokenService>();
-builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));
+// ---- Email sender (MailKit) ----
+// Ensure you have a concrete EmailSender : IEmailSender that uses Smtp settings from appsettings.json
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 
-// -------------------------------------
-// JWT (dev key). Replace with secure key in prod (User Secrets/KeyVault).
-// -------------------------------------
+// ---- JWT token service (emits both ClaimTypes.Role and "role") ----
+builder.Services.AddScoped<JwtTokenService>();
+
+// ---------------- JWT config ----------------
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtIssuer = jwtSection["Issuer"] ?? "Bidforge";
 var jwtAudience = jwtSection["Audience"] ?? "BidforgeClient";
 var cookieName = jwtSection["CookieName"] ?? "auth";
 
-// 32-byte symmetric key from hex
-var keyBytes = Convert.FromHexString("a06f684c8ed4b8cd631643301ea09ffde645a7940ebc7c660d0bfef5fe270294");
-if (keyBytes.Length < 32) throw new InvalidOperationException("JWT key must be >= 32 bytes.");
+// 32-byte+ hex key for HMAC
+var keyHex = jwtSection["KeyHex"]
+             ?? "a06f684c8ed4b8cd631643301ea09ffde645a7940ebc7c660d0bfef5fe270294"; // dev only
+var keyBytes = Convert.FromHexString(keyHex);
+if (keyBytes.Length < 32)
+    throw new InvalidOperationException($"JWT key must be >= 32 bytes; got {keyBytes.Length}.");
+
 var signingKey = new SymmetricSecurityKey(keyBytes);
 
 builder.Services.AddAuthentication(o =>
@@ -84,7 +86,7 @@ builder.Services.AddAuthentication(o =>
 })
 .AddJwtBearer(o =>
 {
-    o.RequireHttpsMetadata = false; // dev
+    o.RequireHttpsMetadata = false; // dev over http
     o.SaveToken = true;
     o.TokenValidationParameters = new TokenValidationParameters
     {
@@ -95,13 +97,18 @@ builder.Services.AddAuthentication(o =>
         ValidateAudience = true,
         ValidAudience = jwtAudience,
         ValidateLifetime = true,
-        ClockSkew = TimeSpan.FromSeconds(30)
+        ClockSkew = TimeSpan.FromSeconds(30),
+
+        // IMPORTANT: we treat ClaimTypes.Role as the role claim type.
+        // (JwtTokenService also emits "role", so clients can still read it easily.)
+        RoleClaimType = ClaimTypes.Role,
+        NameClaimType = ClaimTypes.NameIdentifier
     };
-    // Also accept JWT from cookie "auth" (optional)
     o.Events = new JwtBearerEvents
     {
         OnMessageReceived = ctx =>
         {
+            // If no Authorization header, try cookie
             if (string.IsNullOrEmpty(ctx.Token) &&
                 ctx.Request.Cookies.TryGetValue(cookieName, out var t) &&
                 !string.IsNullOrEmpty(t))
@@ -115,20 +122,27 @@ builder.Services.AddAuthentication(o =>
 
 builder.Services.AddAuthorization();
 
-// CORS for Next.js
+// CORS for frontends
 builder.Services.AddCors(opt =>
 {
-    opt.AddPolicy("frontend", p => p
-        .WithOrigins("http://localhost:3000", "https://localhost:3000")
+    opt.AddPolicy("frontend", p =>
+        p.WithOrigins(
+            "http://localhost:3000",
+            "https://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://192.168.1.104:3000",
+            "https://192.168.1.104:3000"
+        )
         .AllowAnyHeader()
         .AllowAnyMethod()
-        .AllowCredentials());
+        .AllowCredentials()
+    );
 });
 
-// Large multipart uploads (images/KYC)
+// Large multipart for image uploads
 builder.Services.Configure<FormOptions>(o =>
 {
-    o.MultipartBodyLengthLimit = 20_000_000; // 20MB
+    o.MultipartBodyLengthLimit = 50_000_000; // 50 MB
 });
 
 // MVC + Swagger
@@ -138,9 +152,9 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// -------------------------------------
+// ----------------------------------------------------
 // Pipeline
-// -------------------------------------
+// ----------------------------------------------------
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -148,27 +162,23 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Ensure static upload folders
-var env = app.Services.GetRequiredService<IWebHostEnvironment>();
-var webRoot = env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot");
-Directory.CreateDirectory(Path.Combine(webRoot, "uploads", "auctions"));
-Directory.CreateDirectory(Path.Combine(webRoot, "uploads", "avatars"));
-Directory.CreateDirectory(Path.Combine(webRoot, "uploads", "kyc"));
-
-// app.UseHttpsRedirection(); // keep off for HTTP dev if preferred
-app.UseStaticFiles();          // serves /uploads/**
-
+// app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseCors("frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
-// -------------------------------------
-// DB migrate + Role seeding + Optional bootstrap admin
-// -------------------------------------
+// ----------------------------------------------------
+// DB migrate + seed roles + optional bootstrap admin
+// ----------------------------------------------------
 using (var scope = app.Services.CreateScope())
 {
-    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+    var db = services.GetRequiredService<AppDbContext>();
+    var userMgr = services.GetRequiredService<UserManager<ApplicationUser>>();
+    var roleMgr = services.GetRequiredService<RoleManager<IdentityRole>>();
+
     try
     {
         db.Database.Migrate();
@@ -176,64 +186,68 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        logger.LogWarning(ex, "Migrate() failed, falling back to EnsureCreated()");
+        logger.LogWarning(ex, "Migrate() failed, falling back to EnsureCreated().");
         db.Database.EnsureCreated();
         logger.LogInformation("Database ensured via EnsureCreated.");
     }
 
-    // Seed roles and optional bootstrap admin
-    var roleMgr = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    var userMgr = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-
-    async Task EnsureRole(string name)
+    // Seed roles
+    async Task EnsureRoleAsync(string roleName)
     {
-        if (!await roleMgr.RoleExistsAsync(name))
-            await roleMgr.CreateAsync(new IdentityRole(name));
+        if (!await roleMgr.RoleExistsAsync(roleName))
+        {
+            await roleMgr.CreateAsync(new IdentityRole(roleName));
+            logger.LogInformation("Created role {Role}", roleName);
+        }
     }
 
-    await EnsureRole("User");
-    await EnsureRole("Admin");
+    await EnsureRoleAsync("Admin");
+    await EnsureRoleAsync("User");
 
+    // Optional: bootstrap admin from config
     var adminEmail = builder.Configuration["BootstrapAdmin:Email"];
     var adminPass = builder.Configuration["BootstrapAdmin:Password"];
-
     if (!string.IsNullOrWhiteSpace(adminEmail) && !string.IsNullOrWhiteSpace(adminPass))
     {
-        var admin = await userMgr.FindByEmailAsync(adminEmail);
-        if (admin is null)
+        var existing = await userMgr.FindByEmailAsync(adminEmail);
+        if (existing is null)
         {
-            admin = new ApplicationUser
+            var admin = new ApplicationUser
             {
-                UserName = adminEmail,
                 Email = adminEmail,
-                EmailConfirmed = true,
-                DisplayName = "Admin"
+                UserName = adminEmail,
+                DisplayName = "Administrator",
+                EmailConfirmed = true
             };
             var res = await userMgr.CreateAsync(admin, adminPass);
             if (res.Succeeded)
             {
                 await userMgr.AddToRoleAsync(admin, "Admin");
-                logger.LogInformation("Bootstrap admin created: {Email}", adminEmail);
+                await userMgr.AddToRoleAsync(admin, "User");
+                logger.LogInformation("Bootstrapped admin {Email}", adminEmail);
             }
             else
             {
-                logger.LogWarning("Failed to create bootstrap admin: {Err}", string.Join("; ", res.Errors.Select(e => e.Description)));
+                logger.LogError("Failed to create bootstrap admin: {Errs}",
+                    string.Join("; ", res.Errors.Select(e => e.Description)));
             }
         }
         else
         {
-            if (!await userMgr.IsInRoleAsync(admin, "Admin"))
-            {
-                await userMgr.AddToRoleAsync(admin, "Admin");
-                logger.LogInformation("Bootstrap admin promoted: {Email}", adminEmail);
-            }
+            var roles = await userMgr.GetRolesAsync(existing);
+            if (!roles.Contains("Admin"))
+                await userMgr.AddToRoleAsync(existing, "Admin");
+            if (!roles.Contains("User"))
+                await userMgr.AddToRoleAsync(existing, "User");
         }
     }
 }
 
-// -------------------------------------
-// Debug endpoint list (dev helper)
-// -------------------------------------
+// ----------------------------------------------------
+// Diagnostics
+// ----------------------------------------------------
+
+// List endpoints
 app.MapGet("/_endpoints", (EndpointDataSource es) =>
 {
     var items = es.Endpoints
@@ -251,7 +265,33 @@ app.MapGet("/_endpoints", (EndpointDataSource es) =>
     return Results.Json(items);
 });
 
-// Controllers
+// DB ping
+app.MapGet("/db/ping", async (AppDbContext db) =>
+{
+    try
+    {
+        var ok = await db.Database.ExecuteSqlRawAsync("SELECT 1");
+        return Results.Ok(new { ok = ok == -1, provider = db.Database.ProviderName });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+});
+
+// Who am I (requires auth) – single mapping, no ambiguity
+app.MapGet("/api/_debug/whoami", (ClaimsPrincipal user) =>
+{
+    var id = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
+    var email = user.FindFirstValue(ClaimTypes.Email) ?? user.FindFirstValue("email");
+    var roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToArray();
+    // include "role" claims too if any
+    var extra = user.FindAll("role").Select(c => c.Value).ToArray();
+    roles = roles.Concat(extra).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    return Results.Ok(new { id, email, roles });
+}).RequireAuthorization();
+
+// MVC Controllers
 app.MapControllers();
 
 app.Run();

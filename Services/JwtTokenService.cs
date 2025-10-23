@@ -9,7 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Bidforge.Services;
 
-public class JwtTokenService
+public sealed class JwtTokenService
 {
     private readonly IConfiguration _cfg;
     private readonly UserManager<ApplicationUser> _users;
@@ -22,41 +22,48 @@ public class JwtTokenService
 
     public string CreateToken(ApplicationUser user)
     {
-        var jwt = _cfg.GetSection("Jwt");
-        var issuer = jwt["Issuer"] ?? "Bidforge";
-        var audience = jwt["Audience"] ?? "BidforgeClient";
+        var jwtSection = _cfg.GetSection("Jwt");
+        var issuer = jwtSection["Issuer"] ?? "Bidforge";
+        var audience = jwtSection["Audience"] ?? "BidforgeClient";
+        var keyHex = jwtSection["KeyHex"] ??
+                       "a06f684c8ed4b8cd631643301ea09ffde645a7940ebc7c660d0bfef5fe270294"; // dev only
+        var keyBytes = Convert.FromHexString(keyHex);
+        var signingKey = new SymmetricSecurityKey(keyBytes);
+        var creds = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
 
-        // Same hex key used in Program.cs
-        var keyHex = "a06f684c8ed4b8cd631643301ea09ffde645a7940ebc7c660d0bfef5fe270294";
-        var key = new SymmetricSecurityKey(Convert.FromHexString(keyHex));
-
-        var now = DateTime.UtcNow;
-
-        // Load roles so token has role claims
-        var roles = _users.GetRolesAsync(user).GetAwaiter().GetResult() ?? new List<string>();
-
+        // Base claims
         var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
-            new Claim("name", user.DisplayName ?? user.Email ?? ""),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
-            new Claim(JwtRegisteredClaimNames.Nbf, new DateTimeOffset(now).ToUnixTimeSeconds().ToString()),
-            new Claim(JwtRegisteredClaimNames.Exp, new DateTimeOffset(now.AddDays(7)).ToUnixTimeSeconds().ToString()),
-            new Claim(JwtRegisteredClaimNames.Iss, issuer),
-            new Claim(JwtRegisteredClaimNames.Aud, audience)
+            new Claim(ClaimTypes.NameIdentifier, user.Id),
+            new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
         };
 
-        foreach (var r in roles)
-            claims.Add(new Claim(ClaimTypes.Role, r));
+        // Optional display name
+        var name = user.DisplayName ?? user.Email ?? "";
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            claims.Add(new Claim("name", name));
+        }
 
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        // Roles: add BOTH ClaimTypes.Role and a plain "role" claim (many UIs read one or the other).
+        var roles = _users.GetRolesAsync(user).GetAwaiter().GetResult() ?? Array.Empty<string>();
+        foreach (var r in roles)
+        {
+            if (string.IsNullOrWhiteSpace(r)) continue;
+            claims.Add(new Claim(ClaimTypes.Role, r)); // what [Authorize(Roles=...)] checks
+            claims.Add(new Claim("role", r));          // convenient for JS clients
+        }
+
+        var expiresMinutes = int.TryParse(jwtSection["ExpiresMinutes"], out var mins) ? mins : 7 * 24 * 60;
+
         var token = new JwtSecurityToken(
             issuer: issuer,
             audience: audience,
             claims: claims,
-            notBefore: now,
-            expires: now.AddDays(7),
+            notBefore: DateTime.UtcNow,
+            expires: DateTime.UtcNow.AddMinutes(expiresMinutes),
             signingCredentials: creds
         );
 

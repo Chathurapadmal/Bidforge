@@ -1,11 +1,10 @@
 ﻿"use client";
-
 import { MdAccountCircle } from "react-icons/md";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "../../lib/session";
-import { API_BASE } from "../../lib/Config"; 
+import { API_BASE } from "../../lib/Config"; // <-- fixed lowercase
 
 type CookieUser = {
   id: string;
@@ -15,16 +14,16 @@ type CookieUser = {
 };
 
 export default function Navbar() {
-
+  // ---- state
   const [isOpen, setIsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [cookieUser, setCookieUser] = useState<CookieUser | null>(null);
   const [cookieLoading, setCookieLoading] = useState(false);
 
- 
+  // session from context
   const { user, loading, signOut } = useSession();
 
-  
+  // ---- routing
   const pathname = usePathname();
   const router = useRouter();
   const search = useSearchParams();
@@ -34,6 +33,7 @@ export default function Navbar() {
   );
   const menuRef = useRef<HTMLDivElement | null>(null);
 
+  // ---- close profile dropdown on outside click
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
       if (!menuRef.current) return;
@@ -43,7 +43,9 @@ export default function Navbar() {
     return () => document.removeEventListener("click", onDocClick);
   }, []);
 
+  // ---- bootstrap from server session (no redirect)
   useEffect(() => {
+    // If global session already loaded & present, skip
     if (user || loading) return;
 
     let aborted = false;
@@ -62,6 +64,7 @@ export default function Navbar() {
           if (data?.user) setCookieUser(data.user as CookieUser);
         }
       } catch {
+        // ignore
       } finally {
         if (!aborted) setCookieLoading(false);
       }
@@ -85,13 +88,13 @@ export default function Navbar() {
   const doSignOut = async () => {
     try {
       await signOut();
-      setCookieUser(null); 
+      setCookieUser(null); // clear local shadow session too
     } finally {
       router.refresh();
     }
   };
 
- 
+  // go to sell (guarded)
   const goSell = (e?: React.MouseEvent) => {
     e?.preventDefault?.();
     if (isAuthed) router.push("/sell");
@@ -101,10 +104,12 @@ export default function Navbar() {
   return (
     <nav className="bg-white border-b border-gray-200 shadow-md relative z-50">
       <div className="mx-auto px-3 py-1 flex items-center justify-between">
-      
+        {/* Logo */}
         <div className="flex items-center">
           <img src="/bidf.png" alt="Logo" className="h-10 w-auto" />
         </div>
+
+        {/* Desktop links */}
         <div className="hidden md:flex gap-2 items-center h-8">
           <Link href="/" className={linkClasses("/")}>
             Home
@@ -113,6 +118,7 @@ export default function Navbar() {
             Auctions
           </Link>
 
+          {/* Services dropdown */}
           <div className="relative group">
             <button
               className={`${linkClasses("/services")} inline-flex items-center`}
@@ -127,6 +133,7 @@ export default function Navbar() {
               >
                 Buy
               </Link>
+              {/* Sell respects auth: route to /sell if authed, else login with next */}
               <a
                 href={isAuthed ? "/sell" : "/auth/login?next=/sell"}
                 onClick={goSell}
@@ -144,21 +151,20 @@ export default function Navbar() {
             Contact Us
           </Link>
 
-          
+        
 
+          {/* Profile / Auth */}
           <div className="relative ml-1" ref={menuRef}>
             <button
-              className="flex items-center gap-1 text-gray-500 rounded-md px-2 py-1 hover:text-gray-100 hover:bg-gray-200"
+              className="flex items-center gap-1 text-gray-500 rounded-md px-2 py-1 hover:text-gray-100 hover:bg-gray-500"
               onClick={() => setMenuOpen((v) => !v)}
               aria-label="Open profile menu"
               aria-expanded={menuOpen}
               aria-haspopup="menu"
               type="button"
             >
-              
-                <MdAccountCircle className="w-6 h-6 text-gray-600" />
-
-             
+              <MdAccountCircle className="text-lg" />
+              {/* hide the name while loading to avoid flicker */}
               {!loading && !cookieLoading && isAuthed && (
                 <span className="ml-1 text-sm text-gray-700">
                   {authedUser?.userName || authedUser?.email || "Account"}
@@ -212,6 +218,7 @@ export default function Navbar() {
           </div>
         </div>
 
+        {/* Mobile hamburger */}
         <div className="md:hidden">
           <button
             className="bg-gray-300 text-gray-700 px-3 py-2 rounded-md hover:bg-gray-400 transition"
@@ -225,6 +232,7 @@ export default function Navbar() {
         </div>
       </div>
 
+      {/* Mobile menu */}
       <div
         id="mobile-menu"
         className={`md:hidden bg-gray-50 border-t ${
@@ -238,16 +246,11 @@ export default function Navbar() {
           Auctions
         </Link>
 
+        {/* Services on mobile */}
         <Link href="/services/buy" className={linkClasses("/services/buy")}>
           Buy
         </Link>
-        <a
-          href={isAuthed ? "/sell" : "/auth/login?next=/sell"}
-          onClick={goSell}
-          className={linkClasses("/sell")}
-        >
-          Sell
-        </a>
+    
 
         <Link href="/about" className={linkClasses("/about")}>
           About Us
