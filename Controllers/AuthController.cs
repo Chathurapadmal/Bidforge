@@ -11,72 +11,37 @@ namespace Bidforge.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-[Produces("application/json")]
 public class AuthController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _users;
     private readonly SignInManager<ApplicationUser> _signIn;
-    private readonly RoleManager<IdentityRole> _roles;
     private readonly JwtTokenService _jwt;
-    private readonly IEmailSender _email;
-    private readonly IConfiguration _cfg;
 
-    public AuthController(
-        UserManager<ApplicationUser> users,
-        SignInManager<ApplicationUser> signIn,
-        RoleManager<IdentityRole> roles,
-        JwtTokenService jwt,
-        IEmailSender email,
-        IConfiguration cfg)
+    public AuthController(UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn, JwtTokenService jwt)
     {
-        _users = users;
-        _signIn = signIn;
-        _roles = roles;
-        _jwt = jwt;
-        _email = email;
-        _cfg = cfg;
+        _users = users; _signIn = signIn; _jwt = jwt;
     }
 
-    // ---------------- DTOs ----------------
-    public record AuthUserDto(
-        string id,
-        string? email,
-        string? name,
-        bool emailConfirmed,
-        string[] roles
-    );
-
+    public record AuthUserDto(string id, string? email, string? name, string? role = null);
     public record AuthResp(string token, AuthUserDto user);
 
+    // ---------- Register ----------
     public class RegisterDto
     {
         [Required, EmailAddress] public string Email { get; set; } = default!;
         [Required, MinLength(6)] public string Password { get; set; } = default!;
         [MaxLength(100)] public string? Name { get; set; }
-        public string? Role { get; set; } // "User" (default) or "Admin" if allowed
     }
 
-    public class LoginDto
+    // ---------- Admin Register ----------
+    public class AdminRegisterDto
     {
         [Required, EmailAddress] public string Email { get; set; } = default!;
-        [Required] public string Password { get; set; } = default!;
+        [Required, MinLength(6)] public string Password { get; set; } = default!;
+        [MaxLength(100)] public string? Name { get; set; }
+        [Required] public string Role { get; set; } = default!; // "User" or "Admin"
     }
 
-    public class VerifyDto
-    {
-        [Required] public string UserId { get; set; } = default!;
-        [Required] public string Token { get; set; } = default!;
-    }
-
-    private async Task EnsureRoleAsync(string role)
-    {
-        if (!await _roles.RoleExistsAsync(role))
-            await _roles.CreateAsync(new IdentityRole(role));
-    }
-
-    // ---------------- Register ----------------
-    // Creates a user and emails a verification link (no auto-login).
-    // Set allowPublicAdmin=false if you DON'T want the public form to create admins.
     [HttpPost("register")]
     [AllowAnonymous]
     public async Task<IActionResult> Register([FromBody] RegisterDto dto)
@@ -84,52 +49,64 @@ public class AuthController : ControllerBase
         if (!ModelState.IsValid) return ValidationProblem(ModelState);
 
         var exists = await _users.FindByEmailAsync(dto.Email);
-        if (exists is not null)
-            return Conflict(new { message = "Email already registered." });
+        if (exists is not null) return Conflict(new { message = "Email already registered." });
 
         var user = new ApplicationUser
         {
             Email = dto.Email,
             UserName = dto.Email,
-            DisplayName = string.IsNullOrWhiteSpace(dto.Name) ? null : dto.Name!.Trim()
+            DisplayName = dto.Name,
+            Role = "User", // Default role for regular registration
+            IsApproved = false // New users need admin approval after NIC submission
         };
 
-        var create = await _users.CreateAsync(user, dto.Password);
-        if (!create.Succeeded)
-            return BadRequest(new { message = string.Join("; ", create.Errors.Select(e => e.Description)) });
+        var result = await _users.CreateAsync(user, dto.Password);
+        if (!result.Succeeded)
+            return BadRequest(new { message = string.Join("; ", result.Errors.Select(e => e.Description)) });
 
-        // Roles: always add "User"
-        await EnsureRoleAsync("User");
-        await _users.AddToRoleAsync(user, "User");
-
-        // (Optional) Allow public admin creation? (flip to false for safety)
-        var allowPublicAdmin = true; // <-- set to false for production
-        if (allowPublicAdmin && string.Equals(dto.Role, "Admin", StringComparison.OrdinalIgnoreCase))
-        {
-            await EnsureRoleAsync("Admin");
-            await _users.AddToRoleAsync(user, "Admin");
-        }
-
-        // Email verification
-        var token = await _users.GenerateEmailConfirmationTokenAsync(user);
-        var encToken = Uri.EscapeDataString(token);
-
-        var frontendBase = _cfg["Frontend:BaseUrl"] ?? "http://localhost:3000";
-        var verifyUrl = $"{frontendBase}/auth/verify?userId={user.Id}&token={encToken}";
-
-        await _email.SendAsync(
-            user.Email!,
-            "Verify your email",
-            $@"<p>Welcome to Bidforge!</p>
-               <p>Please verify your email by clicking the link below:</p>
-               <p><a href=""{verifyUrl}"">Verify my email</a></p>");
-
-        // No token returned — client should show “check your email”.
-        return Ok(new { ok = true, userId = user.Id, email = user.Email });
+        var token = _jwt.CreateToken(user);
+        var u = new AuthUserDto(user.Id, user.Email, user.DisplayName ?? user.Email, user.Role);
+        return Ok(new AuthResp(token, u));
     }
 
-    // ---------------- Login ----------------
-    // Requires EmailConfirmed; returns JWT and user (with roles).
+    // ---------- Admin Register ----------
+    [HttpPost("register-admin")]
+    [AllowAnonymous] // In production, you might want to restrict this or add special validation
+    public async Task<IActionResult> RegisterAdmin([FromBody] AdminRegisterDto dto)
+    {
+        if (!ModelState.IsValid) return ValidationProblem(ModelState);
+
+        // Validate role
+        if (dto.Role != "User" && dto.Role != "Admin")
+            return BadRequest(new { message = "Role must be 'User' or 'Admin'." });
+
+        var exists = await _users.FindByEmailAsync(dto.Email);
+        if (exists is not null) return Conflict(new { message = "Email already registered." });
+
+        var user = new ApplicationUser
+        {
+            Email = dto.Email,
+            UserName = dto.Email,
+            DisplayName = dto.Name,
+            Role = dto.Role
+        };
+
+        var result = await _users.CreateAsync(user, dto.Password);
+        if (!result.Succeeded)
+            return BadRequest(new { message = string.Join("; ", result.Errors.Select(e => e.Description)) });
+
+        var token = _jwt.CreateToken(user);
+        var u = new AuthUserDto(user.Id, user.Email, user.DisplayName ?? user.Email, user.Role);
+        return Ok(new AuthResp(token, u));
+    }
+
+    // ---------- Login ----------
+    public class LoginDto
+    {
+        [Required, EmailAddress] public string Email { get; set; } = default!;
+        [Required] public string Password { get; set; } = default!;
+    }
+
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
@@ -142,70 +119,85 @@ public class AuthController : ControllerBase
         var ok = await _users.CheckPasswordAsync(user, dto.Password);
         if (!ok) return Unauthorized(new { message = "Invalid credentials." });
 
-        if (!user.EmailConfirmed)
-            return StatusCode(403, new { message = "Please verify your email before logging in." });
-
         var token = _jwt.CreateToken(user);
-        var roles = (await _users.GetRolesAsync(user)).ToArray();
-        var u = new AuthUserDto(user.Id, user.Email, user.DisplayName ?? user.Email, user.EmailConfirmed, roles);
+        var u = new AuthUserDto(user.Id, user.Email, user.DisplayName ?? user.Email, user.Role);
         return Ok(new AuthResp(token, u));
     }
 
-    // ---------------- Verify Email ----------------
-    [HttpPost("verify-email")]
-    [AllowAnonymous]
-    public async Task<IActionResult> VerifyEmail([FromBody] VerifyDto dto)
-    {
-        if (!ModelState.IsValid) return ValidationProblem(ModelState);
-
-        var user = await _users.FindByIdAsync(dto.UserId);
-        if (user is null) return NotFound(new { message = "User not found" });
-
-        var token = Uri.UnescapeDataString(dto.Token ?? "");
-        var res = await _users.ConfirmEmailAsync(user, token);
-        if (!res.Succeeded)
-            return BadRequest(new { message = string.Join("; ", res.Errors.Select(e => e.Description)) });
-
-        return Ok(new { ok = true });
-    }
-
-    // ---------------- Me ----------------
-    // Returns current user + roles (based on JWT).
+    // ---------- Me ----------
     [HttpGet("me")]
     [Authorize]
     public async Task<IActionResult> Me()
     {
-        var id = User?.FindFirstValue("sub")
-                 ?? User?.FindFirstValue(ClaimTypes.NameIdentifier);
-
+        var id = User?.FindFirst("sub")?.Value ?? User?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+        var email = User?.FindFirst("email")?.Value;
+        var name = User?.FindFirst("name")?.Value ?? email;
+        var role = User?.FindFirst("role")?.Value ?? User?.FindFirst(ClaimTypes.Role)?.Value;
         if (string.IsNullOrEmpty(id)) return Unauthorized();
-
+        
+        // Get user approval status and NIC info
         var user = await _users.FindByIdAsync(id);
-        if (user is null) return Unauthorized();
-
-        var roles = (await _users.GetRolesAsync(user)).ToArray();
-        var dto = new AuthUserDto(user.Id, user.Email, user.DisplayName ?? user.Email, user.EmailConfirmed, roles);
-        return Ok(dto);
+        if (user == null) return Unauthorized();
+        
+        return Ok(new {
+            id = id!,
+            email,
+            name,
+            role,
+            isApproved = user.IsApproved,
+            hasNicNumber = !string.IsNullOrEmpty(user.NicNumber),
+            hasNicImage = !string.IsNullOrEmpty(user.NicImagePath)
+        });
     }
 
-    // ---------------- Session (alias) ----------------
-    // Some frontends call /api/auth/session — mirror "me" semantics.
-    [HttpGet("session")]
-    public async Task<IActionResult> Session()
+    // ---------- Submit NIC Information ----------
+    public class SubmitNicDto
     {
-        if (!(User?.Identity?.IsAuthenticated ?? false))
-            return Unauthorized();
+        [Required] public string NicNumber { get; set; } = default!;
+        [Required] public IFormFile NicImage { get; set; } = default!;
+    }
 
-        var id = User?.FindFirstValue("sub")
-                 ?? User?.FindFirstValue(ClaimTypes.NameIdentifier);
-
+    [HttpPost("submit-nic")]
+    [Authorize]
+    public async Task<IActionResult> SubmitNic([FromForm] SubmitNicDto dto)
+    {
+        var id = User?.FindFirst("sub")?.Value ?? User?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
         if (string.IsNullOrEmpty(id)) return Unauthorized();
 
         var user = await _users.FindByIdAsync(id);
-        if (user is null) return Unauthorized();
+        if (user == null) return Unauthorized();
 
-        var roles = (await _users.GetRolesAsync(user)).ToArray();
-        var dto = new AuthUserDto(user.Id, user.Email, user.DisplayName ?? user.Email, user.EmailConfirmed, roles);
-        return Ok(dto);
+        // Validate file
+        if (dto.NicImage.Length > 5 * 1024 * 1024) // 5MB limit
+            return BadRequest("Image file too large. Maximum size is 5MB.");
+
+        var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png" };
+        if (!allowedTypes.Contains(dto.NicImage.ContentType.ToLower()))
+            return BadRequest("Invalid file type. Only JPEG and PNG images are allowed.");
+
+        // Create upload directory
+        var uploadsDir = Path.Combine("wwwroot", "uploads", "nic");
+        Directory.CreateDirectory(uploadsDir);
+
+        // Generate unique filename
+        var extension = Path.GetExtension(dto.NicImage.FileName);
+        var fileName = $"{user.Id}_{DateTime.UtcNow:yyyyMMddHHmmss}{extension}";
+        var filePath = Path.Combine(uploadsDir, fileName);
+
+        // Save file
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await dto.NicImage.CopyToAsync(stream);
+        }
+
+        // Update user
+        user.NicNumber = dto.NicNumber;
+        user.NicImagePath = $"/uploads/nic/{fileName}";
+
+        var result = await _users.UpdateAsync(user);
+        if (!result.Succeeded)
+            return BadRequest("Failed to update user information.");
+
+        return Ok(new { message = "NIC information submitted successfully. Your account is now pending admin approval." });
     }
 }

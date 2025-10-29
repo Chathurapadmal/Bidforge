@@ -1,33 +1,74 @@
 ﻿// src/app/profile/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "../../lib/session";
 import { apiFetch, apiFetchForm } from "../../lib/api";
 import { toImageSrc } from "../../lib/Config";
 
-type KycState = {
-  status: string;
-  nic?: string | null;
-  selfie?: string | null;
-  reviewedAt?: string | null;
+type Profile = {
+  id: string;
+  email: string | null;
+  name: string | null;
+  avatarUrl?: string | null;
+  isApproved?: boolean;
+  hasNicNumber?: boolean;
+  hasNicImage?: boolean;
+};
+
+type MyAuction = {
+  id: number;
+  title: string;
+  currentBid: number;
+  endTime: string;
+  image?: string | null;
+  badge?: string | null;
+};
+
+type MyBid = {
+  id: number;
+  amount: number;
+  at: string;
+  auctionId: number;
+  auctionTitle: string;
+};
+
+type Note = {
+  id: number;
+  type: string;
+  message: string;
+  createdAt: string;
+  isRead: boolean;
+  data?: string | null;
 };
 
 export default function ProfilePage() {
   const { user, loading, refresh } = useSession();
   const router = useRouter();
 
-  const tabs = ["Profile", "Verification"] as const;
+  // tabs
+  const tabs = ["Profile", "My Auctions", "My Bids", "Notifications"] as const;
   type Tab = (typeof tabs)[number];
   const [tab, setTab] = useState<Tab>("Profile");
 
-  const [name, setName] = useState(user?.name || "");
+  // data
+  const [me, setMe] = useState<Profile | null>(null);
+  const [mine, setMine] = useState<MyAuction[] | null>(null);
+  const [bids, setBids] = useState<MyBid[] | null>(null);
+  const [notes, setNotes] = useState<Note[] | null>(null);
+
+  const [name, setName] = useState("");
+  const avatarUrl = useMemo(
+    () => toImageSrc(me?.avatarUrl || undefined),
+    [me?.avatarUrl]
+  );
+
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
-  const [kyc, setKyc] = useState<KycState | null>(null);
+  // NIC submission
+  const [nicNumber, setNicNumber] = useState("");
   const [nicFile, setNicFile] = useState<File | null>(null);
-  const [selfieFile, setSelfieFile] = useState<File | null>(null);
 
   const [err, setErr] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -36,23 +77,33 @@ export default function ProfilePage() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
-
   useEffect(() => {
     if (!loading && !user) router.replace("/auth/login?next=/profile");
   }, [loading, user, router]);
 
+  const loadMe = async () => {
+    const p = await apiFetch<Profile>("/api/auth/me");
+    setMe(p);
+    setName(p.name || "");
+  };
+  const loadMineAuctions = async () =>
+    setMine(await apiFetch<MyAuction[]>("/api/my/auctions"));
+  const loadMyBids = async () =>
+    setBids(await apiFetch<MyBid[]>("/api/my/bids"));
+  const loadNotes = async () =>
+    setNotes(await apiFetch<Note[]>("/api/notifications"));
+
   useEffect(() => {
-    if (user) void loadKyc();
+    if (user) {
+      void loadMe();
+      void loadMineAuctions();
+      void loadMyBids();
+      void loadNotes();
+    }
   }, [user]);
 
-  const loadKyc = async () => {
-    try {
-      const s = await apiFetch<KycState>("/api/kyc/me");
-      setKyc(s as any); // keep your wrapper’s behavior
-    } catch {
-      /* ignore */
-    }
-  };
+  if (loading || !user)
+    return <main className="max-w-4xl mx-auto p-6">Loading…</main>;
 
   const onSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +115,7 @@ export default function ProfilePage() {
         method: "PUT",
         body: JSON.stringify({ name }),
       });
+      await loadMe();
       setInfo("Profile updated.");
     } catch (e: any) {
       setErr(e?.message ?? "Update failed");
@@ -82,6 +134,7 @@ export default function ProfilePage() {
       const fd = new FormData();
       fd.append("file", avatarFile);
       await apiFetchForm("/api/profile/avatar", fd, { method: "POST" });
+      await loadMe();
       setAvatarFile(null);
       setInfo("Avatar updated.");
     } catch (e: any) {
@@ -91,283 +144,330 @@ export default function ProfilePage() {
     }
   };
 
-  const onSubmitKycBoth = async (e: React.FormEvent) => {
+  const onSubmitNic = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!nicNumber || !nicFile) return;
     setErr(null);
     setInfo(null);
-
-    if (!nicFile && !selfieFile) {
-      setErr("Please choose at least one file (NIC or Selfie).");
-      return;
-    }
-
     setBusy(true);
     try {
-      let didSomething = false;
-      if (nicFile) {
-        const fdNic = new FormData();
-        fdNic.append("Nic", nicFile);
-        await apiFetchForm("/api/kyc/nic", fdNic, { method: "POST" });
-        didSomething = true;
-      }
-      if (selfieFile) {
-        const fdSelfie = new FormData();
-        fdSelfie.append("Selfie", selfieFile);
-        await apiFetchForm("/api/kyc/selfie", fdSelfie, { method: "POST" });
-        didSomething = true;
-      }
-      if (didSomething) {
-        setNicFile(null);
-        setSelfieFile(null);
-        await loadKyc();
-        setInfo("KYC files uploaded. Status set to pending.");
-      }
+      const fd = new FormData();
+      fd.append("nicNumber", nicNumber);
+      fd.append("nicImage", nicFile);
+      await apiFetchForm("/api/auth/submit-nic", fd, { method: "POST" });
+      await loadMe();
+      setNicNumber("");
+      setNicFile(null);
+      setInfo("NIC information submitted successfully. Your account is now pending admin approval.");
     } catch (e: any) {
-      setErr(e?.message ?? "KYC upload failed");
+      setErr(e?.message ?? "Submission failed");
     } finally {
       setBusy(false);
     }
   };
 
-  if (loading || !user) {
-    return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="w-full max-w-2xl animate-pulse">
-          <div className="h-6 w-40 bg-gray-200 rounded mb-4" />
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="md:col-span-2 h-64 bg-white border border-gray-200 rounded-2xl" />
-            <div className="h-64 bg-white border border-gray-200 rounded-2xl" />
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  const avatarUrl = toImageSrc(user.avatarUrl || undefined);
+  const markAllRead = async () => {
+    try {
+      await apiFetch("/api/notifications/read-all", { method: "POST" });
+      await loadNotes();
+    } catch (e) {
+      /* ignore */
+    }
+  };
 
   return (
-    <main className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-5xl">
-        <h1 className="text-2xl font-semibold text-gray-900">Your account</h1>
+    <main className="max-w-5xl mx-auto p-6">
+      <h1 className="text-2xl font-bold">Your Account</h1>
 
-        {/* Alerts */}
-        {err && (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {err}
-          </div>
-        )}
-        {info && (
-          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            {info}
-          </div>
-        )}
+      {(err || info) && (
+        <p className={`mt-4 ${err ? "text-red-600" : "text-green-600"}`}>
+          {err || info}
+        </p>
+      )}
 
-        {/* Tabs */}
-        <div className="mt-6 border-b border-gray-200">
-          <div className="flex gap-2">
-            {tabs.map((t) => {
-              const active = tab === t;
-              return (
-                <button
-                  key={t}
-                  onClick={() => setTab(t)}
-                  className={`px-4 py-2 text-sm font-medium -mb-px rounded-t-xl border-b-2 transition ${
-                    active
-                      ? "border-indigo-600 text-indigo-700"
-                      : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
-                  }`}
-                >
-                  {t}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+      {/* Tabs */}
+      <div className="mt-6 flex gap-2 border-b">
+        {tabs.map((t) => (
+          <button
+            key={t}
+            className={`px-3 py-2 -mb-px border-b-2 ${tab === t ? "border-indigo-600 text-indigo-700" : "border-transparent text-gray-600"}`}
+            onClick={() => setTab(t)}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
 
-        {tab === "Profile" && (
-          <section className="mt-6 grid md:grid-cols-3 gap-6">
-            {/* Details card */}
-            <div className="md:col-span-2 bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
-              <form onSubmit={onSaveProfile} className="grid gap-4">
+      {/* PROFILE */}
+      {tab === "Profile" && me && (
+        <section className="mt-6 space-y-6">
+          {/* Account Status */}
+          <div className="bg-white p-4 border rounded">
+            <h3 className="text-lg font-semibold mb-3">Account Status</h3>
+            <div className="flex items-center gap-3">
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                me.isApproved 
+                  ? "bg-green-100 text-green-800" 
+                  : "bg-yellow-100 text-yellow-800"
+              }`}>
+                {me.isApproved ? "✓ Approved" : "⏳ Pending Approval"}
+              </span>
+              {!me.isApproved && (
+                <span className="text-sm text-gray-600">
+                  {!me.hasNicNumber || !me.hasNicImage 
+                    ? "Please submit your NIC information below"
+                    : "Your NIC information is submitted and pending admin review"
+                  }
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* NIC Submission - Only show if not approved and missing NIC info */}
+          {!me.isApproved && (!me.hasNicNumber || !me.hasNicImage) && (
+            <div className="bg-blue-50 p-4 border border-blue-200 rounded">
+              <h3 className="text-lg font-semibold mb-3 text-blue-900">Submit NIC Information</h3>
+              <p className="text-sm text-blue-800 mb-4">
+                To use our auction platform, please submit your National Identity Card information for verification.
+              </p>
+              <form onSubmit={onSubmitNic} className="grid gap-4">
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                    Display name
+                  <label className="block text-sm font-medium text-blue-900 mb-1">
+                    NIC Number
                   </label>
                   <input
-                    className="block w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-gray-900 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    className="w-full border p-2 rounded text-black"
+                    value={nicNumber}
+                    onChange={(e) => setNicNumber(e.target.value)}
+                    placeholder="Enter your NIC number (e.g., 123456789V)"
+                    required
                   />
                 </div>
-
                 <div>
-                  <div className="mb-1.5 text-sm font-medium text-gray-700">
-                    Email
-                  </div>
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-gray-900">
-                    {user.email}
-                  </div>
+                  <label className="block text-sm font-medium text-blue-900 mb-1">
+                    NIC Image
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setNicFile(e.target.files?.[0] ?? null)}
+                    required
+                    className="w-full border p-2 rounded bg-white"
+                  />
+                  <p className="text-xs text-blue-700 mt-1">
+                    Upload a clear image of your NIC (JPEG/PNG, max 5MB)
+                  </p>
                 </div>
+                <button
+                  disabled={busy || !nicNumber || !nicFile}
+                  className="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-60 hover:bg-blue-700"
+                >
+                  {busy ? "Submitting..." : "Submit NIC Information"}
+                </button>
+              </form>
+            </div>
+          )}
 
-                <div>
-                  <div className="mb-1.5 text-sm font-medium text-gray-700">
-                    Email status
-                  </div>
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5">
-                    {user.emailConfirmed ? "Verified" : "Not verified"}
-                  </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="md:col-span-2">
+              <form
+                onSubmit={onSaveProfile}
+                className="grid gap-3 bg-white p-4 border rounded"
+              >
+                <label className="text-sm text-gray-600">Display name</label>
+                <input
+                  className="border p-2 rounded text-black"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                />
+                <div className="text-sm text-gray-600">Email</div>
+                <div className="p-2 border rounded bg-gray-50">
+                  {me.email || "—"}
                 </div>
-
                 <button
                   disabled={busy}
-                  className="mt-2 inline-flex w-fit items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-2 px-4 py-2 rounded bg-indigo-600 text-white disabled:opacity-60"
                 >
-                  {busy ? "Saving…" : "Save changes"}
+                  {busy ? "Saving…" : "Save"}
                 </button>
               </form>
             </div>
 
-            {/* Avatar card */}
-            <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
-              <div className="text-sm font-medium text-gray-700">
-                Profile picture
-              </div>
+          <div className="bg-white p-4 border rounded">
+            <div className="text-sm text-gray-600">Profile picture</div>
+            <div className="mt-2">
               <img
                 src={avatarUrl || "/placeholder.png"}
                 alt="avatar"
-                className="mt-3 w-32 h-32 object-cover rounded-full border"
+                className="w-32 h-32 object-cover rounded-full border"
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).src =
                     "/placeholder.png";
                 }}
               />
-              <form onSubmit={onUploadAvatar} className="mt-4 grid gap-3">
-                <label className="block">
-                  <span className="mb-1.5 block text-sm text-gray-600">
-                    Upload image
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
-                    className="block w-full text-sm text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-gray-700 hover:file:bg-gray-200"
-                  />
-                </label>
-                <button
-                  disabled={busy || !avatarFile}
-                  className="inline-flex w-fit items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            </div>
+            <form onSubmit={onUploadAvatar} className="mt-3 grid gap-2">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
+              />
+              <button
+                disabled={busy || !avatarFile}
+                className="px-3 py-1.5 rounded border"
+              >
+                {busy ? "Uploading…" : "Upload"}
+              </button>
+            </form>
+          </div>
+          </div>
+        </section>
+      )}
+
+      {/* MY AUCTIONS */}
+      {tab === "My Auctions" && (
+        <section className="mt-6">
+          {!mine ? (
+            <p>Loading…</p>
+          ) : mine.length === 0 ? (
+            <p className="text-gray-600">
+              You haven’t created any auctions yet.
+            </p>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {mine.map((a) => (
+                <article
+                  key={a.id}
+                  className="border rounded overflow-hidden bg-white"
                 >
-                  {busy ? "Uploading…" : "Upload"}
-                </button>
-              </form>
-            </div>
-          </section>
-        )}
-
-        {tab === "Verification" && (
-          <section className="mt-6 grid md:grid-cols-2 gap-6">
-            {/* Status card */}
-            <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
-              <h2 className="text-base font-semibold text-gray-900">Status</h2>
-              <p className="mt-2 text-sm text-gray-700">
-                KYC: <strong>{kyc?.status ?? "none"}</strong>
-                {kyc?.reviewedAt && (
-                  <> • Reviewed {new Date(kyc.reviewedAt).toLocaleString()}</>
-                )}
-              </p>
-
-              <div className="mt-4 grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-sm text-gray-600">NIC</div>
-                  {kyc?.nic ? (
+                  <div className="aspect-[4/3] bg-gray-100 overflow-hidden">
                     <img
-                      src={toImageSrc(kyc.nic)}
-                      alt="nic"
-                      className="mt-2 w-full h-40 object-cover border rounded-xl"
+                      src={toImageSrc(a.image)}
+                      alt={a.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src =
+                          "/placeholder.png";
+                      }}
                     />
-                  ) : (
-                    <div className="mt-2 text-xs text-gray-500">
-                      Not uploaded
+                  </div>
+                  <div className="p-3">
+                    <div className="font-semibold line-clamp-1">{a.title}</div>
+                    <div className="text-sm mt-1">
+                      Current: LKR {a.currentBid.toLocaleString()}
                     </div>
-                  )}
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600">Selfie</div>
-                  {kyc?.selfie ? (
-                    <img
-                      src={toImageSrc(kyc.selfie)}
-                      alt="selfie"
-                      className="mt-2 w-full h-40 object-cover border rounded-xl"
-                    />
-                  ) : (
-                    <div className="mt-2 text-xs text-gray-500">
-                      Not uploaded
+                    <div className="text-xs text-gray-500">
+                      Ends {new Date(a.endTime).toLocaleString()}
                     </div>
-                  )}
-                </div>
-              </div>
+                    <div className="mt-3">
+                      <a
+                        className="text-indigo-600 hover:underline"
+                        href={`/productDetail/${a.id}`}
+                      >
+                        Open
+                      </a>
+                    </div>
+                  </div>
+                </article>
+              ))}
             </div>
+          )}
+        </section>
+      )}
 
-            {/* Upload card */}
-            <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
-              <h2 className="text-base font-semibold text-gray-900">
-                Upload documents
-              </h2>
-              <form onSubmit={onSubmitKycBoth} className="mt-4 grid gap-5">
-                <label className="block">
-                  <span className="mb-1.5 block text-sm text-gray-600">
-                    NIC image
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setNicFile(e.target.files?.[0] ?? null)}
-                    className="block w-full text-sm text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-gray-700 hover:file:bg-gray-200"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="mb-1.5 block text-sm text-gray-600">
-                    Selfie
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setSelfieFile(e.target.files?.[0] ?? null)}
-                    className="block w-full text-sm text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-gray-700 hover:file:bg-gray-200"
-                  />
-                </label>
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="submit"
-                    disabled={busy || (!nicFile && !selfieFile)}
-                    className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {busy ? "Submitting…" : "Submit verification"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNicFile(null);
-                      setSelfieFile(null);
-                    }}
-                    className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed"
-                    disabled={busy}
-                  >
-                    Clear
-                  </button>
-                </div>
-
-                <p className="text-xs text-gray-500">
-                  You can submit one or both files. Submitting either will set
-                  your KYC status to <b>pending</b>.
-                </p>
-              </form>
+      {/* MY BIDS */}
+      {tab === "My Bids" && (
+        <section className="mt-6">
+          {!bids ? (
+            <p>Loading…</p>
+          ) : bids.length === 0 ? (
+            <p className="text-gray-600">You haven’t placed any bids yet.</p>
+          ) : (
+            <div className="overflow-x-auto bg-white border rounded">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left p-2">Auction</th>
+                    <th className="text-left p-2">Bid</th>
+                    <th className="text-left p-2">At</th>
+                    <th className="p-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bids.map((b) => (
+                    <tr key={b.id} className="border-t">
+                      <td className="p-2">{b.auctionTitle}</td>
+                      <td className="p-2">LKR {b.amount.toLocaleString()}</td>
+                      <td className="p-2">{new Date(b.at).toLocaleString()}</td>
+                      <td className="p-2">
+                        <a
+                          className="text-indigo-600 hover:underline"
+                          href={`/productDetail/${b.auctionId}`}
+                        >
+                          Open
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </section>
-        )}
-      </div>
+          )}
+        </section>
+      )}
+
+      {/* NOTIFICATIONS */}
+      {tab === "Notifications" && (
+        <section className="mt-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Your notifications</h2>
+            <button
+              onClick={markAllRead}
+              className="text-sm px-3 py-1.5 border rounded"
+            >
+              Mark all read
+            </button>
+          </div>
+
+          {!notes ? (
+            <p className="mt-4">Loading…</p>
+          ) : notes.length === 0 ? (
+            <p className="mt-4 text-gray-600">No notifications yet.</p>
+          ) : (
+            <ul className="mt-4 divide-y border rounded bg-white">
+              {notes.map((n) => (
+                <li key={n.id} className="p-3">
+                  <div className="text-sm">
+                    <span
+                      className={`inline-block px-2 py-0.5 rounded mr-2 ${badgeClass(n.type)}`}
+                    >
+                      {n.type}
+                    </span>
+                    {n.message}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {new Date(n.createdAt).toLocaleString()}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
     </main>
   );
+}
+
+function badgeClass(type: string) {
+  switch (type) {
+    case "bid_placed":
+      return "bg-blue-50 text-blue-700";
+    case "outbid":
+      return "bg-amber-50 text-amber-700";
+    case "winner_purchased":
+      return "bg-emerald-50 text-emerald-700";
+    default:
+      return "bg-gray-100 text-gray-700";
+  }
 }

@@ -43,14 +43,14 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="w-full max-w-md border p-6 rounded-2xl shadow bg-gray-800 space-y-4">
+      <div className="w-full max-w-md border p-6 rounded-2xl shadow space-y-4">
         <h1 className="text-2xl font-semibold">Forgot Password</h1>
-        <p className="text-sm text-gray-400">Step {step} of 3</p>
+        <p className="text-sm text-gray-600">Step {step} of 3</p>
         {msg && <p className="text-green-600 text-sm">{msg}</p>}
         {err && <p className="text-red-600 text-sm">{err}</p>}
 
         {step===1 && (
-          <form onSubmit={sendOtp} className="space-y-3 ">
+          <form onSubmit={sendOtp} className="space-y-3">
             <label className="block">
               <span className="text-sm">Email</span>
               <input className="mt-1 w-full border rounded p-2" type="email" value={email}

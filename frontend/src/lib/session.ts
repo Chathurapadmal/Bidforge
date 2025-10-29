@@ -1,4 +1,4 @@
-// File: src/lib/session.ts
+// src/lib/session.ts
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -8,8 +8,6 @@ export type SessionUser = {
   id: string;
   email?: string | null;
   name?: string | null;
-  emailConfirmed?: boolean;
-  roles?: string[]; // optional if you return roles in /auth/me
 } | null;
 
 export function useSession() {
@@ -49,41 +47,17 @@ export function useSession() {
     setUser(resp.user);
   }, []);
 
-  // NOTE: role is optional. If "Admin" is sent, your backend must allow it.
   const register = useCallback(
-    async (
-      email: string,
-      password: string,
-      name?: string,
-      role?: "User" | "Admin"
-    ) => {
-      // Default path: normal user registration
-      let path = "/api/auth/register";
-      let body: any = { email, password, name };
-
-      // If you want to create admin via public form (not recommended for prod),
-      // make sure your backend supports this. Otherwise this will 403.
-      if (role === "Admin") {
-        // If your backend accepts role on the same endpoint, keep /auth/register and include role.
-        // If you use a dedicated admin endpoint, set:
-        // path = "/api/admin/users/create-admin";
-        body.role = "Admin";
-      }
-
-      const resp = await apiFetch<{
-        token?: string;
-        user?: SessionUser;
-        ok?: boolean;
-      }>(path, { method: "POST", body: JSON.stringify(body) });
-
-      // Some backends return only { ok: true } for register-with-email-verify.
-      if (resp?.token && resp?.user) {
-        setToken(resp.token);
-        setUser(resp.user);
-      } else {
-        // No token → probably email verification flow; keep user signed-out
-        // and let UI show “check email” message.
-      }
+    async (email: string, password: string, name?: string) => {
+      const resp = await apiFetch<{ token: string; user: SessionUser }>(
+        "/api/auth/register",
+        {
+          method: "POST",
+          body: JSON.stringify({ email, password, name }),
+        }
+      );
+      setToken(resp.token!);
+      setUser(resp.user);
     },
     []
   );

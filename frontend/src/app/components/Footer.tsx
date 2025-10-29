@@ -1,6 +1,6 @@
 ﻿import Link from "next/link";
 
-import { FaFacebook, FaWhatsapp, FaLinkedin ,FaInstagram } from "react-icons/fa";
+import { FaFacebook, FaWhatsapp, FaLinkedin } from "react-icons/fa";
 
 
 
@@ -56,22 +56,15 @@ export default function Footer() {
 
                     <Link href="https://wa.me/123456789" target="_blank">
 
-            <FaLinkedin className="w-7 h-7 text-blue-500 hover:scale-110 transition" />
+            <FaLinkedin className="w-7 h-7 text-green-500 hover:scale-110 transition" />
 
           </Link>
-
-         
-
-<Link href="https://instagram.com/yourprofile" target="_blank">
-  <FaInstagram className="w-7 h-7 text-pink-500 hover:scale-110 transition" />
-</Link>
-
 
         </div>
 
 
 
-        <div className="border-t border-blue-300 dark:border-border-dark pt-4">
+        <div className="border-t border-gray-300 dark:border-border-dark pt-4">
 
           <p className="text-sm text-gray-500 dark:text-gray-400">
 

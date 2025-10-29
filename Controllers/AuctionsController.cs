@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Bidforge.Data;
 using Bidforge.Models;
+using Bidforge.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,9 +16,10 @@ public class AuctionsController : ControllerBase
     private readonly AppDbContext _db;
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<AuctionsController> _log;
+    private readonly UserApprovalService _approvalService;
 
-    public AuctionsController(AppDbContext db, IWebHostEnvironment env, ILogger<AuctionsController> log)
-    { _db = db; _env = env; _log = log; }
+    public AuctionsController(AppDbContext db, IWebHostEnvironment env, ILogger<AuctionsController> log, UserApprovalService approvalService)
+    { _db = db; _env = env; _log = log; _approvalService = approvalService; }
 
     // ---------- DTO ----------
     public sealed class CreateAuctionDto
@@ -209,6 +211,11 @@ public class AuctionsController : ControllerBase
     {
         if (!ModelState.IsValid) return ValidationProblem(ModelState);
 
+        // Check user approval status
+        var (isApproved, errorMessage) = await _approvalService.CheckUserApprovalAsync(User);
+        if (!isApproved)
+            return BadRequest(new { message = errorMessage });
+
         var userId = GetUserId(User);
         if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
@@ -217,6 +224,10 @@ public class AuctionsController : ControllerBase
             .FirstOrDefaultAsync(x => x.Id == id, ct);
 
         if (a is null) return NotFound(new { message = "Auction not found" });
+
+        // Prevent sellers from bidding on their own auctions
+        if (string.Equals(a.SellerId, userId, StringComparison.Ordinal))
+            return BadRequest(new { message = "You cannot bid on your own auction." });
 
         var now = DateTime.UtcNow;
         if (now >= a.EndTimeUtc) return BadRequest(new { message = "Auction already ended." });
@@ -305,6 +316,11 @@ public class AuctionsController : ControllerBase
     public async Task<IActionResult> Create([FromForm] CreateAuctionDto dto, CancellationToken ct)
     {
         if (!ModelState.IsValid) return ValidationProblem(ModelState);
+
+        // Check user approval status
+        var (isApproved, errorMessage) = await _approvalService.CheckUserApprovalAsync(User);
+        if (!isApproved)
+            return BadRequest(new { message = errorMessage });
 
         var userId = GetUserId(User);
         if (string.IsNullOrEmpty(userId)) return Unauthorized();

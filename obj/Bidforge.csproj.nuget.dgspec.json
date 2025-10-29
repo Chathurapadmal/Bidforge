@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "E:\\New folder\\Bidforge\\Bidforge.csproj": {}
+    "E:\\workingone\\Bidforge - Copy\\Bidforge.csproj": {}
   },
   "projects": {
-    "E:\\New folder\\Bidforge\\Bidforge.csproj": {
+    "E:\\workingone\\Bidforge - Copy\\Bidforge.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "E:\\New folder\\Bidforge\\Bidforge.csproj",
+        "projectUniqueName": "E:\\workingone\\Bidforge - Copy\\Bidforge.csproj",
         "projectName": "Bidforge",
-        "projectPath": "E:\\New folder\\Bidforge\\Bidforge.csproj",
+        "projectPath": "E:\\workingone\\Bidforge - Copy\\Bidforge.csproj",
         "packagesPath": "C:\\Users\\Chathura\\.nuget\\packages",
-        "outputPath": "E:\\New folder\\Bidforge\\obj\\",
+        "outputPath": "E:\\workingone\\Bidforge - Copy\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "D:\\Softwares\\VS sdk\\NuGetPackages"
@@ -22,15 +22,15 @@
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
-          "net8.0"
+          "net9.0"
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net8.0": {
-            "targetAlias": "net8.0",
+          "net9.0": {
+            "targetAlias": "net9.0",
             "projectReferences": {}
           }
         },
@@ -47,13 +47,9 @@
         "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
-        "net8.0": {
-          "targetAlias": "net8.0",
+        "net9.0": {
+          "targetAlias": "net9.0",
           "dependencies": {
-            "MailKit": {
-              "target": "Package",
-              "version": "[4.14.1, )"
-            },
             "Microsoft.AspNetCore.Authentication.JwtBearer": {
               "target": "Package",
               "version": "[8.0.6, )"
@@ -76,10 +72,6 @@
               "suppressParent": "All",
               "target": "Package",
               "version": "[8.0.6, )"
-            },
-            "MimeKit": {
-              "target": "Package",
-              "version": "[4.14.0, )"
             },
             "Swashbuckle.AspNetCore": {
               "target": "Package",

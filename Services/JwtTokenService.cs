@@ -3,70 +3,51 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Bidforge.Models;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Bidforge.Services;
 
-public sealed class JwtTokenService
+public class JwtTokenService
 {
-    private readonly IConfiguration _cfg;
-    private readonly UserManager<ApplicationUser> _users;
+    private readonly string _issuer;
+    private readonly string _audience;
+    private readonly SymmetricSecurityKey _signingKey;
 
-    public JwtTokenService(IConfiguration cfg, UserManager<ApplicationUser> users)
+    public JwtTokenService(IConfiguration cfg)
     {
-        _cfg = cfg;
-        _users = users;
+        var jwt = cfg.GetSection("Jwt");
+        _issuer = jwt["Issuer"] ?? "Bidforge";
+        _audience = jwt["Audience"] ?? "BidforgeClient";
+
+        // same dev key as Program.cs
+        var keyBytes = Convert.FromHexString("a06f684c8ed4b8cd631643301ea09ffde645a7940ebc7c660d0bfef5fe270294");
+        _signingKey = new SymmetricSecurityKey(keyBytes);
     }
 
-    public string CreateToken(ApplicationUser user)
+    public string CreateToken(ApplicationUser user, TimeSpan? lifetime = null)
     {
-        var jwtSection = _cfg.GetSection("Jwt");
-        var issuer = jwtSection["Issuer"] ?? "Bidforge";
-        var audience = jwtSection["Audience"] ?? "BidforgeClient";
-        var keyHex = jwtSection["KeyHex"] ??
-                       "a06f684c8ed4b8cd631643301ea09ffde645a7940ebc7c660d0bfef5fe270294"; // dev only
-        var keyBytes = Convert.FromHexString(keyHex);
-        var signingKey = new SymmetricSecurityKey(keyBytes);
-        var creds = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
-
-        // Base claims
+        var now = DateTime.UtcNow;
         var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
-            new Claim(ClaimTypes.NameIdentifier, user.Id),
-            new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
+            new(JwtRegisteredClaimNames.Sub, user.Id),
+            new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+            new("name", user.DisplayName ?? user.UserName ?? user.Email ?? string.Empty),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
+            new(ClaimTypes.Role, user.Role), // Add role claim
+            new("role", user.Role), // Add custom role claim for easier access
         };
 
-        // Optional display name
-        var name = user.DisplayName ?? user.Email ?? "";
-        if (!string.IsNullOrWhiteSpace(name))
-        {
-            claims.Add(new Claim("name", name));
-        }
-
-        // Roles: add BOTH ClaimTypes.Role and a plain "role" claim (many UIs read one or the other).
-        var roles = _users.GetRolesAsync(user).GetAwaiter().GetResult() ?? Array.Empty<string>();
-        foreach (var r in roles)
-        {
-            if (string.IsNullOrWhiteSpace(r)) continue;
-            claims.Add(new Claim(ClaimTypes.Role, r)); // what [Authorize(Roles=...)] checks
-            claims.Add(new Claim("role", r));          // convenient for JS clients
-        }
-
-        var expiresMinutes = int.TryParse(jwtSection["ExpiresMinutes"], out var mins) ? mins : 7 * 24 * 60;
-
-        var token = new JwtSecurityToken(
-            issuer: issuer,
-            audience: audience,
+        var creds = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256);
+        var jwt = new JwtSecurityToken(
+            issuer: _issuer,
+            audience: _audience,
             claims: claims,
-            notBefore: DateTime.UtcNow,
-            expires: DateTime.UtcNow.AddMinutes(expiresMinutes),
+            notBefore: now,
+            expires: now.Add(lifetime ?? TimeSpan.FromDays(7)),
             signingCredentials: creds
         );
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return new JwtSecurityTokenHandler().WriteToken(jwt);
     }
 }

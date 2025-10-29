@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import "./css/globals.css";
 import { useEffect, useMemo, useState } from "react";
 import PhotoSlider from "./components/slider";
 import Hero from "./components/hero";
@@ -13,13 +14,14 @@ type AuctionDto = {
   currentBid: number;
   startTime?: string | null;
   endTime?: string | null;
-  image?: string | null; 
+  image?: string | null; // filename, "/images/x", or absolute URL
   badge?: string | null;
 };
 
 import { API_BASE } from "../lib/Config";
 const PLACEHOLDER = "/placeholder.png";
 
+/* ---------- utils ---------- */
 function toImageSrc(img?: string | null): string {
   if (!img) return PLACEHOLDER;
   let s = img.trim();
@@ -27,10 +29,10 @@ function toImageSrc(img?: string | null): string {
   try {
     s = decodeURIComponent(s);
   } catch {}
-  if (/^https?:\/\//i.test(s)) return s; 
-  if (s.startsWith("images/")) s = `/${s}`; 
-  if (s.startsWith("/images/")) return `${API_BASE}${s}`;
-  return `${API_BASE}/images/${encodeURIComponent(s)}`; 
+  if (/^https?:\/\//i.test(s)) return s; // absolute URL
+  if (s.startsWith("images/")) s = `/${s}`; // "images/x" -> "/images/x"
+  if (s.startsWith("/images/")) return `${API_BASE}${s}`; // server path
+  return `${API_BASE}/images/${encodeURIComponent(s)}`; // bare filename
 }
 
 function useCountdown(endIso?: string | null) {
@@ -63,6 +65,7 @@ function fmtCurrencyLKR(n: number) {
   return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 
+/* ---------- card ---------- */
 function FeaturedAuctionCard({ a }: { a: AuctionDto }) {
   const { isOver, label } = useCountdown(a.endTime);
   const imgSrc = useMemo(() => toImageSrc(a.image), [a.image]);
@@ -124,6 +127,7 @@ function FeaturedAuctionCard({ a }: { a: AuctionDto }) {
   );
 }
 
+/* ---------- page ---------- */
 export default function Page() {
   const [auctions, setAuctions] = useState<AuctionDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -153,7 +157,7 @@ export default function Page() {
 
   return (
     <section className="relative overflow-hidden min-h-screen bg-white text-gray-900">
-    
+      {/* background accents (white theme) */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full blur-3xl bg-indigo-500/15" />
         <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full blur-3xl bg-pink-500/15" />
@@ -163,12 +167,12 @@ export default function Page() {
       <main className="p-6">
         <Hero />
 
+        {/* Top Photo Slider */}
         <div className="mt-2">
-          <PhotoSlider
-            images={["slide1.jpg", "slide2.jpg", "slide3.jpg", ]}
-          />
+          <PhotoSlider images={["slide1.jpg", "slide2.jpg", "slide3.jpg"]} />
         </div>
 
+        {/* Featured Auctions */}
         {error && <p className="text-red-600 mt-6">{error}</p>}
         {loading && (
           <p className="mt-6 text-gray-600">Loading featured auctions…</p>

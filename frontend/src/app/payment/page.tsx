@@ -2,11 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 
 export default function PaymentPage() {
-  const router = useRouter();
-
   // Shipping address state
   const [fullName, setFullName] = useState("");
   const [address, setAddress] = useState("");
@@ -27,6 +24,7 @@ export default function PaymentPage() {
     if (!fullName || !address || !city || !state || !postal || !country || !phone) {
       return "❌ Please complete all required shipping fields.";
     }
+    // very light phone check
     if (!/^[0-9+\-\s()]{6,}$/.test(phone)) {
       return "❌ Enter a valid phone number.";
     }
@@ -60,25 +58,20 @@ export default function PaymentPage() {
     }
 
     setError(null);
-    router.push("/payment/success");
+    alert("✅ Shipping + Card details look valid (frontend checks)");
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
-      {/* Bidforge logo */}
-      <div className="flex justify-center mb-6">
-        <Image src="/bidf.png" alt="Bidforge Logo" width={80} height={80} className="h-12 w-auto" />
-      </div>
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
+      <h1 className="text-4xl font-bold text-gray-900 mb-2">Card payment</h1>
+      <h2 className="text-2xl font-semibold text-gray-800 mb-8">Checkout form</h2>
 
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Card Payment</h1>
-      <h2 className="text-xl font-semibold text-gray-700 mb-8">Checkout Form</h2>
-
-      {/* Card container */}
+      {/* Middle container with strong shadow */}
       <form
         onSubmit={handleSubmit}
         className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl ring-1 ring-black/5 overflow-hidden"
       >
-        {/* Shipping section */}
+        {/* Shipping Address (top section) */}
         <section className="p-8 border-b border-gray-200">
           <h3 className="text-xl font-semibold text-gray-900 mb-6">Shipping Address</h3>
 
@@ -89,77 +82,153 @@ export default function PaymentPage() {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <LabelledInput label="Full name" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
-            <LabelledInput label="Phone number" required value={phone} onChange={(e) => setPhone(e.target.value)} />
-            <LabelledInput label="Address line" required colSpan={2} value={address} onChange={(e) => setAddress(e.target.value)} />
-            <LabelledInput label="City" required value={city} onChange={(e) => setCity(e.target.value)} />
-            <LabelledInput label="State / Region" required value={state} onChange={(e) => setRegion(e.target.value)} />
-            <LabelledInput label="Postal code" required value={postal} onChange={(e) => setPostal(e.target.value)} />
-            <LabelledInput label="Country" required value={country} onChange={(e) => setCountry(e.target.value)} />
+            <LabelledInput
+              label="Full name"
+              required
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+            />
+            <LabelledInput
+              label="Phone number"
+              required
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+            <LabelledInput
+              label="Address line"
+              required
+              colSpan={2}
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+            <LabelledInput
+              label="Address line 2"
+              required
+              colSpan={2}
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+            <LabelledInput
+              label="City"
+              required
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+            />
+            <LabelledInput
+              label="State / Region"
+              required
+              value={state}
+              onChange={(e) => setRegion(e.target.value)}
+            />
+            <LabelledInput
+              label="Postal code"
+              required
+              value={postal}
+              onChange={(e) => setPostal(e.target.value)}
+            />
+            <LabelledInput
+              label="Country"
+              required
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+            />
           </div>
         </section>
 
-        {/* Payment Section */}
+        {/* Payment Gateway (bottom section) */}
         <section className="flex flex-col md:flex-row">
           {/* Left Summary */}
-          <div className="bg-gray-50 p-8 md:w-1/2 border-r border-gray-200">
-            <h3 className="text-2xl font-semibold mb-4 text-gray-900">Amount</h3>
-            <div className="mt-6 text-gray-700 space-y-2">
-              <div className="flex justify-between">
-                <span>Item purchased</span>
-                <span>$96.00</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Shipping</span>
-                <span>Free</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Tax</span>
-                <span>$0.00</span>
-              </div>
-              <hr className="my-4 border-gray-300" />
-              <div className="flex justify-between font-semibold text-gray-900">
-                <span>Total payable</span>
-                <span>$96.00</span>
+          <div className="bg-white p-8 md:w-1/2 border-r border-gray-200">
+            <h3 className="text-2xl font-semibold mb-4 text-gray-900">Payment gateway</h3>
+            <div className="mt-6">
+              <p className="text-sm text-gray-600">Subscription fee</p>
+              <h2 className="text-4xl font-bold text-gray-900">
+                $96.00{" "}
+                <span className="text-base font-normal text-gray-500">/month</span>
+              </h2>
+
+              <div className="mt-6 text-gray-700 space-y-2">
+                <div className="flex justify-between">
+                  <span>Platform basic (billed monthly)</span>
+                  <span>$96.00</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>$96.00</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Tax</span>
+                  <span>$0.00</span>
+                </div>
+                <hr className="my-4 border-gray-300" />
+                <div className="flex justify-between font-semibold">
+                  <span>Total due today</span>
+                  <span>$96.00</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Right Payment Form */}
+          {/* Right Form */}
           <div className="p-8 md:w-1/2">
-            <h3 className="text-xl font-semibold text-gray-900 mb-6">Complete Payment</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-6">
+              Complete registration payment
+            </h3>
 
+            {/* Payment methods */}
             <div className="mb-6">
               <p className="text-sm font-semibold mb-2 text-gray-700">Payment methods</p>
               <div className="flex items-center gap-3">
                 <Image src="/visa.png" alt="Visa" width={40} height={25} />
+                <Image src="/stripe.png" alt="Stripe" width={40} height={25} />
+                <Image src="/paypal.png" alt="PayPal" width={40} height={25} />
                 <Image src="/mastercard.png" alt="Mastercard" width={40} height={25} />
+                <Image src="/gpay.png" alt="Google Pay" width={40} height={25} />
               </div>
             </div>
 
+            {/* Card details */}
             <div className="grid grid-cols-2 gap-4">
               <LabelledInput label="Cardholder name" required colSpan={2} />
-              <LabelledInput label="Card number" required colSpan={2} value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} />
-              <LabelledInput label="Expiry (MM/YY)" required value={expiry} onChange={(e) => setExpiry(e.target.value)} />
-              <LabelledInput label="CVC" required value={cvc} onChange={(e) => setCvc(e.target.value)} />
+              <LabelledInput
+                label="Card number"
+                required
+                colSpan={2}
+                value={cardNumber}
+                onChange={(e) => setCardNumber(e.target.value)}
+              />
+              <LabelledInput
+                label="Expiry (MM/YY)"
+                required
+                value={expiry}
+                onChange={(e) => setExpiry(e.target.value)}
+              />
+              <LabelledInput
+                label="CVC"
+                required
+                value={cvc}
+                onChange={(e) => setCvc(e.target.value)}
+              />
             </div>
 
             <button
               type="submit"
               className="mt-6 w-full bg-[#0b2b23] text-white py-3 rounded-lg font-semibold hover:bg-[#134c3a] transition-all"
             >
-              Pay Now
+              Pay now
             </button>
           </div>
         </section>
       </form>
 
-      <footer className="text-gray-500 text-sm mt-8">© 2025 All Rights Reserved.</footer>
+      <footer className="text-gray-500 text-sm mt-8">
+        © 2025 All Rights Reserved. 
+      </footer>
     </div>
   );
 }
 
-// 🔹 Reusable input component
+// Reusable input with label + asterisk + grid support
 function LabelledInput({
   label,
   required = false,
@@ -174,7 +243,11 @@ function LabelledInput({
   onChange?: React.ChangeEventHandler<HTMLInputElement>;
 }) {
   return (
-    <label className={`text-sm font-medium text-gray-700 ${colSpan ? `md:col-span-${colSpan}` : ""}`}>
+    <label
+      className={`text-sm font-medium text-gray-700 ${
+        colSpan ? `md:col-span-${colSpan}` : ""
+      }`}
+    >
       {label}
       {required && <span className="text-red-500 ml-1">*</span>}
       <input

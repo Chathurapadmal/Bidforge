@@ -26,10 +26,11 @@ function toImageSrc(img?: string | null): string {
   if (!s) return PLACEHOLDER;
   try {
     s = decodeURIComponent(s);
-  } catch {}
+  } catch { }
   if (/^https?:\/\//i.test(s)) return s;
   if (s.startsWith("images/")) s = `/${s}`;
   if (s.startsWith("/images/")) return `${API_BASE}${s}`;
+  if (s.startsWith("/uploads/")) return `${API_BASE}${s}`;
   return `${API_BASE}/images/${encodeURIComponent(s)}`;
 }
 

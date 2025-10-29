@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "../../lib/session";
 import { API_BASE } from "../../lib/Config"; // <-- fixed lowercase
+import { ApprovalStatus } from "./ApprovalGuard";
 
 type CookieUser = {
   id: string;
@@ -21,7 +22,7 @@ export default function Navbar() {
   const [cookieLoading, setCookieLoading] = useState(false);
 
   // session from context
-  const { user, loading, signOut } = useSession();
+  const { user, loading, logout } = useSession();
 
   // ---- routing
   const pathname = usePathname();
@@ -87,10 +88,11 @@ export default function Navbar() {
 
   const doSignOut = async () => {
     try {
-      await signOut();
+      await logout();
       setCookieUser(null); // clear local shadow session too
     } finally {
-      router.refresh();
+      // Full page refresh to ensure all state is cleared and UI updates
+      window.location.reload();
     }
   };
 
@@ -128,7 +130,7 @@ export default function Navbar() {
             </button>
             <div className="absolute left-0 top-full hidden group-hover:block bg-gray-50 border mt-1 rounded w-32 z-50 before:content-[''] before:absolute before:-top-2 before:left-0 before:w-full before:h-2">
               <Link
-                href="/services/buy"
+                href="/buy"
                 className="block px-2 py-1 text-gray-700 hover:text-blue-400 hover:scale-105 hover:shadow-lg rounded-md transition-all duration-200"
               >
                 Buy
@@ -167,7 +169,7 @@ export default function Navbar() {
               {/* hide the name while loading to avoid flicker */}
               {!loading && !cookieLoading && isAuthed && (
                 <span className="ml-1 text-sm text-gray-700">
-                  {authedUser?.userName || authedUser?.email || "Account"}
+                  {(authedUser as any)?.userName || (authedUser as any)?.name || authedUser?.email || "Account"}
                 </span>
               )}
             </button>
@@ -179,6 +181,9 @@ export default function Navbar() {
               >
                 {isAuthed ? (
                   <>
+                    <div className="px-3 py-2 border-b">
+                      <ApprovalStatus />
+                    </div>
                     <Link
                       href="/profile"
                       className="block px-3 py-2 rounded hover:bg-gray-100 text-gray-800"
@@ -247,7 +252,7 @@ export default function Navbar() {
         </Link>
 
         {/* Services on mobile */}
-        <Link href="/services/buy" className={linkClasses("/services/buy")}>
+        <Link href="/buy" className={linkClasses("/buy")}>
           Buy
         </Link>
     
